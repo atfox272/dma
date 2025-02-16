@@ -1,4 +1,4 @@
-module adma_chn_buf
+module adma_data_buf
 #(
     
 ) (

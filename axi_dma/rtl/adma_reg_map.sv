@@ -2,7 +2,7 @@ module adma_reg_map
 #(
     // DMA
     parameter DMA_BASE_ADDR     = 32'h8000_0000,
-    parameter DMA_WR_CHN_NUM    = 4,    // Number of DMA write channels
+    parameter DMA_CHN_NUM       = 4,    // Number of DMA channels
     parameter DMA_LENGTH_W      = 16,   // Maximum size of 1 transfer is (2^16 * 256) 
     parameter DMA_DESC_DEPTH    = 4,    // The maximum number of descriptors in each channel
     parameter DMA_CHN_ARB_W     = 3,    // Channel arbitration weight's width
@@ -17,7 +17,7 @@ module adma_reg_map
     parameter TRANS_DATA_SIZE_W = 3,
     parameter TRANS_RESP_W      = 2,
     // Do not configure these
-    parameter DMA_DESC_XFER_ID  = $clog2(DMA_DESC_DEPTH)
+    parameter DMA_XFER_ID_W     = $clog2(DMA_DESC_DEPTH)
 ) (
     
     input                           aclk,
@@ -55,42 +55,45 @@ module adma_reg_map
     // DMA CSRs
     output                          dma_en,
     // Channel CSR
-    output                          chn_ctrl_en         [DMA_WR_CHN_NUM-1:0],
-    output                          chn_xfer_2d         [DMA_WR_CHN_NUM-1:0],
-    output                          chn_xfer_cyclic     [DMA_WR_CHN_NUM-1:0],
-    output                          chn_irq_msk_irq_com [DMA_WR_CHN_NUM-1:0],
-    input                           chn_irq_src_irq_com [DMA_WR_CHN_NUM-1:0],
-    output  [DMA_CHN_ARB_W-1:0]     chn_arb_rate        [DMA_WR_CHN_NUM-1:0],
+    output                          chn_ctrl_en         [0:DMA_CHN_NUM-1],
+    output                          chn_xfer_2d         [0:DMA_CHN_NUM-1],
+    output                          chn_xfer_cyclic     [0:DMA_CHN_NUM-1],
+    output                          chn_irq_msk_irq_com [0:DMA_CHN_NUM-1],
+    output                          chn_irq_msk_irq_qed [0:DMA_CHN_NUM-1],
+    input                           chn_irq_src_irq_com [0:DMA_CHN_NUM-1],
+    input                           chn_irq_src_irq_qed [0:DMA_CHN_NUM-1],
+    output  [DMA_CHN_ARB_W-1:0]     chn_arb_rate        [0:DMA_CHN_NUM-1],
     // AXI4 Transaction CSR
-    output  [MST_ID_W-1:0]          atx_id              [DMA_WR_CHN_NUM-1:0],
-    output  [1:0]                   atx_burst           [DMA_WR_CHN_NUM-1:0],
-    output  [DMA_LENGTH_W-1:0]      src_wd_per_burst    [DMA_WR_CHN_NUM-1:0],
-    output  [DMA_LENGTH_W-1:0]      dst_wd_per_burst    [DMA_WR_CHN_NUM-1:0],
+    output  [MST_ID_W-1:0]          atx_id              [0:DMA_CHN_NUM-1],
+    output  [1:0]                   atx_src_burst       [0:DMA_CHN_NUM-1],
+    output  [1:0]                   atx_dst_burst       [0:DMA_CHN_NUM-1],
+    output  [DMA_LENGTH_W-1:0]      src_wd_per_burst    [0:DMA_CHN_NUM-1],
+    output  [DMA_LENGTH_W-1:0]      dst_wd_per_burst    [0:DMA_CHN_NUM-1],
     // Descriptor Queue
-    output                          desc_wr_vld_o       [DMA_WR_CHN_NUM-1:0],
-    input                           desc_wr_rdy_i       [DMA_WR_CHN_NUM-1:0],
-    output  [SRC_ADDR_W-1:0]        desc_src_addr_o     [DMA_WR_CHN_NUM-1:0],
-    output  [DST_ADDR_W-1:0]        desc_dst_addr_o     [DMA_WR_CHN_NUM-1:0],
-    output  [DMA_LENGTH_W-1:0]      desc_xfer_xlen_o    [DMA_WR_CHN_NUM-1:0],
-    output  [DMA_LENGTH_W-1:0]      desc_xfer_ylen_o    [DMA_WR_CHN_NUM-1:0],
-    output  [DMA_LENGTH_W-1:0]      desc_src_strd_o     [DMA_WR_CHN_NUM-1:0],
-    output  [DMA_LENGTH_W-1:0]      desc_dst_strd_o     [DMA_WR_CHN_NUM-1:0],
+    output                          desc_wr_vld_o       [0:DMA_CHN_NUM-1],
+    input                           desc_wr_rdy_i       [0:DMA_CHN_NUM-1],
+    output  [SRC_ADDR_W-1:0]        desc_src_addr_o     [0:DMA_CHN_NUM-1],
+    output  [DST_ADDR_W-1:0]        desc_dst_addr_o     [0:DMA_CHN_NUM-1],
+    output  [DMA_LENGTH_W-1:0]      desc_xfer_xlen_o    [0:DMA_CHN_NUM-1],
+    output  [DMA_LENGTH_W-1:0]      desc_xfer_ylen_o    [0:DMA_CHN_NUM-1],
+    output  [DMA_LENGTH_W-1:0]      desc_src_strd_o     [0:DMA_CHN_NUM-1],
+    output  [DMA_LENGTH_W-1:0]      desc_dst_strd_o     [0:DMA_CHN_NUM-1],
     // DMA Transfer CSR
-    input   [DMA_DESC_XFER_ID-1:0]  xfer_id             [DMA_WR_CHN_NUM-1:0],
-    input   [DMA_DESC_DEPTH-1:0]    xfer_done           [DMA_WR_CHN_NUM-1:0],
-    input   [DMA_DESC_XFER_ID-1:0]  active_xfer_id      [DMA_WR_CHN_NUM-1:0],
-    input   [DMA_LENGTH_W-1:0]      active_xfer_len     [DMA_WR_CHN_NUM-1:0]
+    input   [DMA_XFER_ID_W-1:0]     xfer_id             [0:DMA_CHN_NUM-1],
+    input   [DMA_DESC_DEPTH-1:0]    xfer_done           [0:DMA_CHN_NUM-1],
+    input   [DMA_XFER_ID_W-1:0]     active_xfer_id      [0:DMA_CHN_NUM-1],
+    input   [DMA_LENGTH_W-1:0]      active_xfer_len     [0:DMA_CHN_NUM-1]
 
 );
     // Local paramters
     localparam RW_REG_ADDR      = DMA_BASE_ADDR + 32'h0000_0000;    // Read-Write registers
     localparam RW1S_REG_ADDR    = DMA_BASE_ADDR + 32'h0000_1000;    // Write-to-set registers
     localparam RO_REG_ADDR      = DMA_BASE_ADDR + 32'h0000_2000;    // Read only registers
-    localparam RW_REG_NUM       = DMA_WR_CHN_NUM * 16; // Each channel has 16 RW registers (use 15/16 registers)
-    localparam RW1S_REG_NUM     = DMA_WR_CHN_NUM * 1;  // Each channel has 1 RW1S register
-    localparam RO_REG_NUM       = DMA_WR_CHN_NUM * 16; // Each channel has 16 RO registers (use 5/16 registers)
-    localparam RW1S_REG_OFFSET  = 16;                  // Channel's ID is mapped to [7:4] -> Same as RW and RO registers
-    localparam DMA_CSR_CHN_OFS  = 16;                  // Channel offset os all CSRs
+    localparam RW_REG_NUM       = DMA_CHN_NUM * 16;     // Each channel has 16 RW registers (use 16/16 registers)
+    localparam RW1S_REG_NUM     = DMA_CHN_NUM * 1;      // Each channel has 1/1 RW1S register
+    localparam RO_REG_NUM       = DMA_CHN_NUM * 16;     // Each channel has 16 RO registers (use 5/16 registers)
+    localparam RW1S_REG_OFFSET  = 16;                   // Channel's ID is mapped to [7:4] -> Same as RW and RO registers
+    localparam DMA_CSR_CHN_OFS  = 16;                   // Channel offset os all CSRs
     localparam DMA_DESC_ID_W    = $clog2(DMA_DESC_DEPTH);
     
     // Internal variables
@@ -176,37 +179,39 @@ module adma_reg_map
 generate
     // -- RW registers (Base 0x0000)
         assign dma_en                       = rw_reg[                            0  ][0];
-    for (chn_idx = 0; chn_idx < DMA_WR_CHN_NUM; chn_idx = chn_idx + 1) begin : RW_CON_GEN
+    for (chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : RW_CON_GEN
         assign chn_ctrl_en[chn_idx]         = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h01  ][0];
         assign chn_xfer_2d[chn_idx]         = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h02  ][0];
         assign chn_xfer_cyclic[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h02  ][1];
         assign chn_irq_msk_irq_com[chn_idx] = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h03  ][0];
+        assign chn_irq_msk_irq_qed[chn_idx] = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h03  ][1];
         assign chn_arb_rate[chn_idx]        = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h04  ][DMA_CHN_ARB_W-1:0];
 
         assign atx_id[chn_idx]              = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h05  ][MST_ID_W-1:0];
-        assign atx_burst[chn_idx]           = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h06  ][1:0];
-        assign src_wd_per_burst[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h07  ][DMA_LENGTH_W-1:0];
-        assign dst_wd_per_burst[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h08  ][DMA_LENGTH_W-1:0];
+        assign atx_src_burst[chn_idx]       = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h06  ][1:0];
+        assign atx_dst_burst[chn_idx]       = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h07  ][1:0];
+        assign src_wd_per_burst[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h08  ][DMA_LENGTH_W-1:0];
+        assign dst_wd_per_burst[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h09  ][DMA_LENGTH_W-1:0];
         
-        assign desc_src_addr_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h09  ][SRC_ADDR_W-1:0];
-        assign desc_dst_addr_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0A  ][DST_ADDR_W-1:0];
-        assign desc_xfer_xlen_o[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0B  ][DMA_LENGTH_W-1:0];
-        assign desc_xfer_ylen_o[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0C  ][DMA_LENGTH_W-1:0];
-        assign desc_src_strd_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0D  ][DMA_LENGTH_W-1:0];
-        assign desc_dst_strd_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0E  ][DMA_LENGTH_W-1:0];
+        assign desc_src_addr_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0A  ][SRC_ADDR_W-1:0];
+        assign desc_dst_addr_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0B  ][DST_ADDR_W-1:0];
+        assign desc_xfer_xlen_o[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0C  ][DMA_LENGTH_W-1:0];
+        assign desc_xfer_ylen_o[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0D  ][DMA_LENGTH_W-1:0];
+        assign desc_src_strd_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0E  ][DMA_LENGTH_W-1:0];
+        assign desc_dst_strd_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0F  ][DMA_LENGTH_W-1:0];
     end
 
     // -- RO registers  (Base 0x2000)
-    for (chn_idx = 0; chn_idx < DMA_WR_CHN_NUM; chn_idx = chn_idx + 1) begin : RO_CON_GEN
-        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h00 ] = {{(S_DATA_W-1){1'b0}},                  chn_irq_src_irq_com[chn_idx]};
-        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h01 ] = {{(S_DATA_W-DMA_DESC_XFER_ID){1'b0}},   xfer_id[chn_idx]            };
-        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h02 ] = {{(S_DATA_W-DMA_DESC_DEPTH){1'b0}},     xfer_done[chn_idx]          };
-        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h03 ] = {{(S_DATA_W-DMA_DESC_XFER_ID){1'b0}},   active_xfer_id[chn_idx]     };
-        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h04 ] = {{(S_DATA_W-DMA_LENGTH_W){1'b0}},       active_xfer_len[chn_idx]    };
+    for (chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : RO_CON_GEN
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h00 ] = {{(S_DATA_W-2){1'b0}},              chn_irq_src_irq_qed[chn_idx],   chn_irq_src_irq_com[chn_idx]};
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h01 ] = {{(S_DATA_W-DMA_XFER_ID_W){1'b0}},                                  xfer_id[chn_idx]            };
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h02 ] = {{(S_DATA_W-DMA_DESC_DEPTH){1'b0}},                                 xfer_done[chn_idx]          };
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h03 ] = {{(S_DATA_W-DMA_XFER_ID_W){1'b0}},                                  active_xfer_id[chn_idx]     };
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h04 ] = {{(S_DATA_W-DMA_LENGTH_W){1'b0}},                                   active_xfer_len[chn_idx]    };
     end
 
     // -- RW1S registers (Base 0x1000)
-    for (chn_idx = 0; chn_idx < DMA_WR_CHN_NUM; chn_idx = chn_idx + 1) begin : RW1S_CON_GEN
+    for (chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : RW1S_CON_GEN
         assign rw1s_rd_vld[chn_idx]     = desc_wr_rdy_i[chn_idx];
         assign desc_wr_vld_o[chn_idx]   = rw1s_rd_rdy[chn_idx];
     end

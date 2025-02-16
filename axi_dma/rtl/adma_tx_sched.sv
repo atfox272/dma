@@ -1,4 +1,4 @@
-module adma_chn_arb
+module adma_tx_sched
 #(
     
 ) (

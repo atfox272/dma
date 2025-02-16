@@ -3,7 +3,7 @@ module axi_dma
 #(
     // DMA
     parameter DMA_BASE_ADDR     = 32'h8000_0000,
-    parameter DMA_WR_CHN_NUM    = 4,    // Number of DMA write channels
+    parameter DMA_CHN_NUM       = 4,    // Number of DMA channels
     parameter DMA_LENGTH_W      = 16,   // Maximum size of 1 transfer is (2^16 * 256) 
     parameter DMA_DESC_DEPTH    = 4,    // The maximum number of descriptors in each channel
     parameter DMA_CHN_ARB_W     = 3,    // Channel arbitration weight's width
@@ -72,21 +72,21 @@ module axi_dma
 
     // AXI4 Master Write (destination) port
     // -- AW channel         
-    output  [MST_ID_W-1:0]                  m_awid_o        [0:DMA_WR_CHN_NUM-1],
-    output  [DST_ADDR_W-1:0]                m_awaddr_o      [0:DMA_WR_CHN_NUM-1],
-    output  [TRANS_DATA_LEN_W-1:0]          m_awlen_o       [0:DMA_WR_CHN_NUM-1],
-    output                                  m_awvalid_o     [0:DMA_WR_CHN_NUM-1],
-    input                                   m_awready_i     [0:DMA_WR_CHN_NUM-1],
+    output  [MST_ID_W-1:0]                  m_awid_o        [0:DMA_CHN_NUM-1],
+    output  [DST_ADDR_W-1:0]                m_awaddr_o      [0:DMA_CHN_NUM-1],
+    output  [TRANS_DATA_LEN_W-1:0]          m_awlen_o       [0:DMA_CHN_NUM-1],
+    output                                  m_awvalid_o     [0:DMA_CHN_NUM-1],
+    input                                   m_awready_i     [0:DMA_CHN_NUM-1],
     // -- W channel          
-    output  [DMA_DST_DATA_W-1:0]            m_wdata_o       [0:DMA_WR_CHN_NUM-1],
-    output                                  m_wlast_o       [0:DMA_WR_CHN_NUM-1],
-    output                                  m_wvalid_o      [0:DMA_WR_CHN_NUM-1],
-    input                                   m_wready_i      [0:DMA_WR_CHN_NUM-1],
+    output  [DMA_DST_DATA_W-1:0]            m_wdata_o       [0:DMA_CHN_NUM-1],
+    output                                  m_wlast_o       [0:DMA_CHN_NUM-1],
+    output                                  m_wvalid_o      [0:DMA_CHN_NUM-1],
+    input                                   m_wready_i      [0:DMA_CHN_NUM-1],
     // -- B channel
-    input   [MST_ID_W-1:0]                  m_bid_i         [0:DMA_WR_CHN_NUM-1],
-    input   [TRANS_RESP_W-1:0]              m_bresp_i       [0:DMA_WR_CHN_NUM-1],
-    input                                   m_bvalid_i      [0:DMA_WR_CHN_NUM-1],
-    output                                  m_bready_o      [0:DMA_WR_CHN_NUM-1],
+    input   [MST_ID_W-1:0]                  m_bid_i         [0:DMA_CHN_NUM-1],
+    input   [TRANS_RESP_W-1:0]              m_bresp_i       [0:DMA_CHN_NUM-1],
+    input                                   m_bvalid_i      [0:DMA_CHN_NUM-1],
+    output                                  m_bready_o      [0:DMA_CHN_NUM-1],
 
     // Interrupt
     output                                  irq
@@ -110,9 +110,9 @@ module axi_dma
 
     );
 
-    adma_chn_arb #(
+    adma_tx_sched #(
 
-    ) ca (
+    ) ts (
 
     );
 
@@ -122,9 +122,9 @@ module axi_dma
 
     );
     
-    adma_chn_buf #(
+    adma_data_buf #(
 
-    ) cb (
+    ) db (
 
     );
 
