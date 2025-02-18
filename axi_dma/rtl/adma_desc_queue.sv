@@ -19,7 +19,7 @@ module adma_desc_queue
 ) (
     input                       clk,
     input                       rst_n,
-    input                       queue_en_i,   // Queue enable signal
+    input                       queue_en_i      [0:DMA_CHN_NUM-1], // Queue enable signal (DMA_enable & CHN_enable)
     // To Registers Map
     input   [SRC_ADDR_W-1:0]    src_addr_i      [0:DMA_CHN_NUM-1],
     input   [DST_ADDR_W-1:0]    dst_addr_i      [0:DMA_CHN_NUM-1],
@@ -50,11 +50,15 @@ module adma_desc_queue
 
     // Internal signal
     wire                        desc_wr_hsk [0:DMA_CHN_NUM-1];
+    wire                        desc_wr_vld [0:DMA_CHN_NUM-1];
+    wire                        desc_wr_rdy [0:DMA_CHN_NUM-1];
     reg     [DMA_XFER_ID_W-1:0] xfer_id_cnt [0:DMA_CHN_NUM-1];   // 0 -> 3 -> 0 ... 
 
 generate
     for(chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : DESC_QUEUE_LOGIC
-        assign desc_wr_hsk[chn_idx]     = desc_wr_rdy_o[chn_idx] & desc_wr_vld_i[chn_idx];
+        assign desc_wr_vld[chn_idx]     = queue_en_i[chn_idx] & desc_wr_vld_i[chn_idx];
+        assign desc_wr_rdy_o[chn_idx]   = queue_en_i[chn_idx] & desc_wr_rdy[chn_idx];
+        assign desc_wr_hsk[chn_idx]     = desc_wr_rdy_o[chn_idx] & desc_wr_vld[chn_idx];
         assign xfer_done_clear[chn_idx] = desc_wr_hsk[chn_idx]; // Assert 1 cycle only
         always @(posedge clk or negedge rst_n) begin
             if(~rst_n) begin
@@ -79,11 +83,11 @@ if(DESC_QUEUE_TYPE == "FLIPFLOP-BASED") begin : FF_BASED
             .clk            (clk),
             .data_i         ({xfer_id_cnt[chn_idx], src_addr_i[chn_idx], dst_addr_i[chn_idx], xfer_xlen_i[chn_idx], xfer_ylen_i[chn_idx], src_stride_i[chn_idx], dst_stride_i[chn_idx]}),
             .data_o         ({xfer_id_o[chn_idx],   src_addr_o[chn_idx], dst_addr_o[chn_idx], xfer_xlen_o[chn_idx], xfer_ylen_o[chn_idx], src_stride_o[chn_idx], dst_stride_o[chn_idx]}),
-            .wr_valid_i     (desc_wr_vld_i[chn_idx]),
+            .wr_valid_i     (desc_wr_vld[chn_idx]),
             .rd_valid_i     (desc_rd_vld_i[chn_idx]),
             .empty_o        (), 
             .full_o         (), 
-            .wr_ready_o     (desc_wr_rdy_o[chn_idx]),
+            .wr_ready_o     (desc_wr_rdy[chn_idx]),
             .rd_ready_o     (desc_rd_rdy_o[chn_idx]),
             .almost_empty_o (),
             .almost_full_o  (),
