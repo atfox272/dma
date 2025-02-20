@@ -84,7 +84,7 @@ module adma_as_atx_arb #(
     assign fwd_hsk        = fwd_atx_vld & fwd_atx_rdy;
 generate
 for(chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : CHN_MAP
-    assign bwd_atx_rdy[chn_idx] = (chn_grnt_id == chn_idx) ? fwd_atx_rdy : 1'b0;
+    assign bwd_atx_rdy[chn_idx] = (chn_grnt_id == chn_idx) & fwd_atx_rdy;
     assign chn_req[chn_idx] = bwd_atx_vld[chn_idx];
     assign chn_req_weight[(chn_idx+1)*DMA_CHN_ARB_W-1-:DMA_CHN_ARB_W] = chn_arb_rate[chn_idx];
 end

@@ -43,7 +43,7 @@ module adma_atx_sched
     output                      atx_vld,
     input                       atx_rdy,
     // AXI Transaction control
-    input                       atx_done
+    input                       atx_done            [0:DMA_CHN_NUM-1]
 );
     // Internal variables
     genvar chn_idx;
@@ -94,7 +94,7 @@ for(chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : CHN_UNIT_
         .awburst        (req_awburst[chn_idx]),
         .atx_vld        (req_atx_vld[chn_idx]),
         .atx_rdy        (req_atx_rdy[chn_idx]),
-        .atx_done       (atx_done)
+        .atx_done       (atx_done[chn_idx])
     );
 end
 endgenerate
@@ -122,16 +122,16 @@ endgenerate
         .bwd_atx_vld    (req_atx_vld),
         .bwd_atx_rdy    (req_atx_rdy),
         .chn_arb_rate   (chn_arb_rate),
-        .fwd_atx_chn_id (fwd_atx_chn_id),
-        .fwd_arid       (fwd_arid),
-        .fwd_araddr     (fwd_araddr),
-        .fwd_arlen      (fwd_arlen),
-        .fwd_arburst    (fwd_arburst),
-        .fwd_awid       (fwd_awid),
-        .fwd_awaddr     (fwd_awaddr),
-        .fwd_awlen      (fwd_awlen),
-        .fwd_awburst    (fwd_awburst),
-        .fwd_atx_vld    (fwd_atx_vld),
-        .fwd_atx_rdy    (fwd_atx_rdy)
+        .fwd_atx_chn_id (atx_chn_id),
+        .fwd_arid       (arid),
+        .fwd_araddr     (araddr),
+        .fwd_arlen      (arlen),
+        .fwd_arburst    (arburst),
+        .fwd_awid       (awid),
+        .fwd_awaddr     (awaddr),
+        .fwd_awlen      (awlen),
+        .fwd_awburst    (awburst),
+        .fwd_atx_vld    (atx_vld),
+        .fwd_atx_rdy    (atx_rdy)
     );
 endmodule
