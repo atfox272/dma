@@ -67,8 +67,7 @@ module adma_reg_map
     output  [MST_ID_W-1:0]          atx_id              [0:DMA_CHN_NUM-1],
     output  [1:0]                   atx_src_burst       [0:DMA_CHN_NUM-1],
     output  [1:0]                   atx_dst_burst       [0:DMA_CHN_NUM-1],
-    output  [DMA_LENGTH_W-1:0]      src_wd_per_burst    [0:DMA_CHN_NUM-1],
-    output  [DMA_LENGTH_W-1:0]      dst_wd_per_burst    [0:DMA_CHN_NUM-1],
+    output  [DMA_LENGTH_W-1:0]      atx_wd_per_burst    [0:DMA_CHN_NUM-1],
     // Descriptor Queue
     output                          desc_wr_vld_o       [0:DMA_CHN_NUM-1],
     input                           desc_wr_rdy_i       [0:DMA_CHN_NUM-1],
@@ -89,7 +88,7 @@ module adma_reg_map
     localparam RW_REG_ADDR      = DMA_BASE_ADDR + 32'h0000_0000;    // Read-Write registers
     localparam RW1S_REG_ADDR    = DMA_BASE_ADDR + 32'h0000_1000;    // Write-to-set registers
     localparam RO_REG_ADDR      = DMA_BASE_ADDR + 32'h0000_2000;    // Read only registers
-    localparam RW_REG_NUM       = DMA_CHN_NUM * 16;     // Each channel has 16 RW registers (use 16/16 registers)
+    localparam RW_REG_NUM       = DMA_CHN_NUM * 16;     // Each channel has 16 RW registers (use 15/16 registers)
     localparam RW1S_REG_NUM     = DMA_CHN_NUM * 1;      // Each channel has 1/1 RW1S register
     localparam RO_REG_NUM       = DMA_CHN_NUM * 16;     // Each channel has 16 RO registers (use 5/16 registers)
     localparam RW1S_REG_OFFSET  = 16;                   // Channel's ID is mapped to [7:4] -> Same as RW and RO registers
@@ -190,15 +189,14 @@ generate
         assign atx_id[chn_idx]              = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h05  ][MST_ID_W-1:0];
         assign atx_src_burst[chn_idx]       = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h06  ][1:0];
         assign atx_dst_burst[chn_idx]       = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h07  ][1:0];
-        assign src_wd_per_burst[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h08  ][DMA_LENGTH_W-1:0];
-        assign dst_wd_per_burst[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h09  ][DMA_LENGTH_W-1:0];
+        assign atx_wd_per_burst[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h08  ][DMA_LENGTH_W-1:0];
         
-        assign desc_src_addr_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0A  ][SRC_ADDR_W-1:0];
-        assign desc_dst_addr_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0B  ][DST_ADDR_W-1:0];
-        assign desc_xfer_xlen_o[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0C  ][DMA_LENGTH_W-1:0];
-        assign desc_xfer_ylen_o[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0D  ][DMA_LENGTH_W-1:0];
-        assign desc_src_strd_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0E  ][DMA_LENGTH_W-1:0];
-        assign desc_dst_strd_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0F  ][DMA_LENGTH_W-1:0];
+        assign desc_src_addr_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h09  ][SRC_ADDR_W-1:0];
+        assign desc_dst_addr_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0A  ][DST_ADDR_W-1:0];
+        assign desc_xfer_xlen_o[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0B  ][DMA_LENGTH_W-1:0];
+        assign desc_xfer_ylen_o[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0C  ][DMA_LENGTH_W-1:0];
+        assign desc_src_strd_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0D  ][DMA_LENGTH_W-1:0];
+        assign desc_dst_strd_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0E  ][DMA_LENGTH_W-1:0];
     end
 
     // -- RO registers  (Base 0x2000)

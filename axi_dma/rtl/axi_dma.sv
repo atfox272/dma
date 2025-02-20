@@ -60,6 +60,7 @@ module axi_dma
     output  [MST_ID_W-1:0]                  m_arid_o,
     output  [SRC_ADDR_W-1:0]                m_araddr_o,
     output  [TRANS_DATA_LEN_W-1:0]          m_arlen_o,
+    output  [1:0]                           m_arburst_o,
     output                                  m_arvalid_o,
     input                                   m_arready_i,
     // -- -- R channel          
@@ -75,6 +76,7 @@ module axi_dma
     output  [MST_ID_W-1:0]                  m_awid_o        [0:DMA_CHN_NUM-1],
     output  [DST_ADDR_W-1:0]                m_awaddr_o      [0:DMA_CHN_NUM-1],
     output  [TRANS_DATA_LEN_W-1:0]          m_awlen_o       [0:DMA_CHN_NUM-1],
+    output  [1:0]                           m_arburst_o     [0:DMA_CHN_NUM-1],
     output                                  m_awvalid_o     [0:DMA_CHN_NUM-1],
     input                                   m_awready_i     [0:DMA_CHN_NUM-1],
     // -- W channel          
@@ -110,9 +112,9 @@ module axi_dma
 
     );
 
-    adma_tx_sched #(
+    adma_atx_sched #(
 
-    ) ts (
+    ) as (
 
     );
 

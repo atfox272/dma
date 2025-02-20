@@ -41,7 +41,7 @@ module adma_cm_tx_fetch
     output                      tx_vld,
     input                       tx_rdy,
     // Transaction control
-    input                       tx_done // Should ONLY assert 1 cycle -> (assert > 1 cycle) is fail
+    input                       tx_done
 );
     // Local parameters 
     localparam DESC_INFO_W = DMA_XFER_ID_W + SRC_ADDR_W + DST_ADDR_W + DMA_LENGTH_W + DMA_LENGTH_W + DMA_LENGTH_W + DMA_LENGTH_W;
