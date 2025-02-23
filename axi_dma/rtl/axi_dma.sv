@@ -93,8 +93,8 @@ module axi_dma #(
     output                          m_bready_o,
 
     // Interrupt
-    output                          irq,    // Caused by TX Queueing, TX Completion
-    output                          trap    // Caused by Wrong address mapping
+    output                          irq         [0:DMA_CHN_NUM-1],  // Caused by TX Queueing, TX Completion
+    output                          trap        [0:DMA_CHN_NUM-1]   // Caused by Wrong address mapping
 );
     // Local parameters
     localparam DMA_XFER_ID_W        = $clog2(DMA_DESC_DEPTH);
@@ -169,11 +169,6 @@ module axi_dma #(
     wire                            irq_com             [0:DMA_CHN_NUM-1];
     wire                            trap_atx_src_err    [0:DMA_CHN_NUM-1];
     wire                            trap_atx_dst_err    [0:DMA_CHN_NUM-1];
-    // Miscellaneous -- Unpackage
-    wire    [DMA_CHN_NUM-1:0]       irq_qed_pck;
-    wire    [DMA_CHN_NUM-1:0]       irq_com_pck;
-    wire    [DMA_CHN_NUM-1:0]       atx_src_err_pck;
-    wire    [DMA_CHN_NUM-1:0]       atx_dst_err_pck;
     // Module instantiation
     // -- Register Map
     adma_reg_map #(
@@ -413,14 +408,10 @@ module axi_dma #(
         .m_bready_o         (m_bready_o)
     );
     // Combine all interrupts and traps
-    assign irq  = |irq_qed_pck | |irq_com_pck;
-    assign trap = |atx_src_err_pck | |atx_dst_err_pck;
 generate
 for (chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : UNPACK_GEN
-    assign irq_qed_pck[chn_idx] = irq_qed[chn_idx];
-    assign irq_com_pck[chn_idx] = irq_com[chn_idx];
-    assign atx_src_err_pck[chn_idx] = trap_atx_src_err[chn_idx];
-    assign atx_dst_err_pck[chn_idx] = trap_atx_dst_err[chn_idx];
+    assign irq[chn_idx]     = irq_qed[chn_idx] | irq_com[chn_idx];
+    assign trap[chn_idx]    = trap_atx_src_err[chn_idx] | trap_atx_dst_err[chn_idx];
 end
 endgenerate
 endmodule
