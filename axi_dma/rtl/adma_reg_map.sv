@@ -13,9 +13,9 @@ module adma_reg_map
     parameter SRC_ADDR_W        = 32,
     parameter DST_ADDR_W        = 32,
     parameter MST_ID_W          = 5,
-    parameter TRANS_DATA_LEN_W  = 8,
-    parameter TRANS_DATA_SIZE_W = 3,
-    parameter TRANS_RESP_W      = 2,
+    parameter ATX_LEN_W         = 8,
+    parameter ATX_SIZE_W        = 3,
+    parameter ATX_RESP_W        = 2,
     // Do not configure these
     parameter DMA_XFER_ID_W     = $clog2(DMA_DESC_DEPTH)
 ) (
@@ -26,7 +26,7 @@ module adma_reg_map
     // -- AW channel         
     input   [MST_ID_W-1:0]          s_awid_i,
     input   [S_ADDR_W-1:0]          s_awaddr_i,
-    input   [TRANS_DATA_LEN_W-1:0]  s_awlen_i,
+    input   [ATX_LEN_W-1:0]         s_awlen_i,
     input                           s_awvalid_i,
     output                          s_awready_o,
     // -- W channel          
@@ -36,19 +36,19 @@ module adma_reg_map
     output                          s_wready_o,
     // -- B channel          
     output  [MST_ID_W-1:0]          s_bid_o,
-    output  [TRANS_RESP_W-1:0]      s_bresp_o,
+    output  [ATX_RESP_W-1:0]        s_bresp_o,
     output                          s_bvalid_o,
     input                           s_bready_i,
     // -- AR channel         
     input   [MST_ID_W-1:0]          s_arid_i,
     input   [S_ADDR_W-1:0]          s_araddr_i,
-    input   [TRANS_DATA_LEN_W-1:0]  s_arlen_i,
+    input   [ATX_LEN_W-1:0]         s_arlen_i,
     input                           s_arvalid_i,
     output                          s_arready_o,
     // -- R channel          
     output  [MST_ID_W-1:0]          s_rid_o,
     output  [S_DATA_W-1:0]          s_rdata_o,
-    output  [TRANS_RESP_W-1:0]      s_rresp_o,
+    output  [ATX_RESP_W-1:0]        s_rresp_o,
     output                          s_rlast_o,
     output                          s_rvalid_o,
     input                           s_rready_i,
@@ -177,7 +177,7 @@ module adma_reg_map
     // Registers Mapping
 generate
     // -- RW registers (Base 0x0000)
-        assign dma_en                       = rw_reg[                            0  ][0];
+        assign dma_en                       = rw_reg[                            4'h00  ][0];
     for (chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : RW_CON_GEN
         assign chn_ctrl_en[chn_idx]         = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h01  ][0];
         assign chn_xfer_2d[chn_idx]         = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h02  ][0];

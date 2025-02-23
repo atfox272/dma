@@ -19,6 +19,7 @@ module adma_desc_queue
 ) (
     input                       clk,
     input                       rst_n,
+    input                       queue_en_glb_i,
     input                       queue_en_i          [0:DMA_CHN_NUM-1], // Queue enable signal (DMA_enable & CHN_enable)
     // To Registers Map
     input   [SRC_ADDR_W-1:0]    src_addr_i          [0:DMA_CHN_NUM-1],
@@ -44,6 +45,7 @@ module adma_desc_queue
     // Channel CSR
     input                       chn_irq_msk_irq_qed [0:DMA_CHN_NUM-1],
     output                      chn_irq_src_irq_qed [0:DMA_CHN_NUM-1],  // Status
+    output  [DMA_XFER_ID_W-1:0] nxt_xfer_id         [0:DMA_CHN_NUM-1],
     // Interrupt reuqest control
     output                      irq_qed             [0:DMA_CHN_NUM-1]
 );
@@ -74,11 +76,12 @@ for(chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : DESC_QUEU
         .o              (irq_qed[chn_idx])
     );
     // Combination logic
-    assign desc_wr_vld[chn_idx]     = queue_en_i[chn_idx] & desc_wr_vld_i[chn_idx];
-    assign desc_wr_rdy_o[chn_idx]   = queue_en_i[chn_idx] & desc_wr_rdy[chn_idx];
+    assign desc_wr_vld[chn_idx]     = queue_en_glb_i & queue_en_i[chn_idx] & desc_wr_vld_i[chn_idx];
+    assign desc_wr_rdy_o[chn_idx]   = queue_en_glb_i & queue_en_i[chn_idx] & desc_wr_rdy[chn_idx];
     assign desc_wr_hsk[chn_idx]     = desc_wr_rdy_o[chn_idx] & desc_wr_vld[chn_idx];
     assign xfer_done_clear[chn_idx] = desc_wr_hsk[chn_idx]; // Assert 1 cycle only
     assign xfer_qed[chn_idx]        = desc_wr_hsk[chn_idx];
+    assign nxt_xfer_id[chn_idx]     = xfer_id_cnt[chn_idx]; 
     always @(posedge clk or negedge rst_n) begin
         if(~rst_n) begin
             xfer_id_cnt[chn_idx] <= {DMA_XFER_ID_W{1'b0}};
