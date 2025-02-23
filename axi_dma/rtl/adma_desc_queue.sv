@@ -19,28 +19,33 @@ module adma_desc_queue
 ) (
     input                       clk,
     input                       rst_n,
-    input                       queue_en_i      [0:DMA_CHN_NUM-1], // Queue enable signal (DMA_enable & CHN_enable)
+    input                       queue_en_i          [0:DMA_CHN_NUM-1], // Queue enable signal (DMA_enable & CHN_enable)
     // To Registers Map
-    input   [SRC_ADDR_W-1:0]    src_addr_i      [0:DMA_CHN_NUM-1],
-    input   [DST_ADDR_W-1:0]    dst_addr_i      [0:DMA_CHN_NUM-1],
-    input   [DMA_LENGTH_W-1:0]  xfer_xlen_i     [0:DMA_CHN_NUM-1],
-    input   [DMA_LENGTH_W-1:0]  xfer_ylen_i     [0:DMA_CHN_NUM-1],
-    input   [DMA_LENGTH_W-1:0]  src_stride_i    [0:DMA_CHN_NUM-1],
-    input   [DMA_LENGTH_W-1:0]  dst_stride_i    [0:DMA_CHN_NUM-1],
-    input                       desc_wr_vld_i   [0:DMA_CHN_NUM-1],
-    output                      desc_wr_rdy_o   [0:DMA_CHN_NUM-1],
+    input   [SRC_ADDR_W-1:0]    src_addr_i          [0:DMA_CHN_NUM-1],
+    input   [DST_ADDR_W-1:0]    dst_addr_i          [0:DMA_CHN_NUM-1],
+    input   [DMA_LENGTH_W-1:0]  xfer_xlen_i         [0:DMA_CHN_NUM-1],
+    input   [DMA_LENGTH_W-1:0]  xfer_ylen_i         [0:DMA_CHN_NUM-1],
+    input   [DMA_LENGTH_W-1:0]  src_stride_i        [0:DMA_CHN_NUM-1],
+    input   [DMA_LENGTH_W-1:0]  dst_stride_i        [0:DMA_CHN_NUM-1],
+    input                       desc_wr_vld_i       [0:DMA_CHN_NUM-1],
+    output                      desc_wr_rdy_o       [0:DMA_CHN_NUM-1],
     // To Channel Management
-    output  [DMA_XFER_ID_W-1:0] xfer_id_o       [0:DMA_CHN_NUM-1],
-    output  [SRC_ADDR_W-1:0]    src_addr_o      [0:DMA_CHN_NUM-1],
-    output  [DST_ADDR_W-1:0]    dst_addr_o      [0:DMA_CHN_NUM-1],
-    output  [DMA_LENGTH_W-1:0]  xfer_xlen_o     [0:DMA_CHN_NUM-1],
-    output  [DMA_LENGTH_W-1:0]  xfer_ylen_o     [0:DMA_CHN_NUM-1],
-    output  [DMA_LENGTH_W-1:0]  src_stride_o    [0:DMA_CHN_NUM-1],
-    output  [DMA_LENGTH_W-1:0]  dst_stride_o    [0:DMA_CHN_NUM-1],
-    input                       desc_rd_vld_i   [0:DMA_CHN_NUM-1],
-    output                      desc_rd_rdy_o   [0:DMA_CHN_NUM-1],
-
-    output  [DMA_DESC_DEPTH-1:0]xfer_done_clear [0:DMA_CHN_NUM-1]
+    output  [DMA_XFER_ID_W-1:0] xfer_id_o           [0:DMA_CHN_NUM-1],
+    output  [SRC_ADDR_W-1:0]    src_addr_o          [0:DMA_CHN_NUM-1],
+    output  [DST_ADDR_W-1:0]    dst_addr_o          [0:DMA_CHN_NUM-1],
+    output  [DMA_LENGTH_W-1:0]  xfer_xlen_o         [0:DMA_CHN_NUM-1],
+    output  [DMA_LENGTH_W-1:0]  xfer_ylen_o         [0:DMA_CHN_NUM-1],
+    output  [DMA_LENGTH_W-1:0]  src_stride_o        [0:DMA_CHN_NUM-1],
+    output  [DMA_LENGTH_W-1:0]  dst_stride_o        [0:DMA_CHN_NUM-1],
+    input                       desc_rd_vld_i       [0:DMA_CHN_NUM-1],
+    output                      desc_rd_rdy_o       [0:DMA_CHN_NUM-1],
+    // Transfer control
+    output  [DMA_DESC_DEPTH-1:0]xfer_done_clear     [0:DMA_CHN_NUM-1],
+    // Channel CSR
+    input                       chn_irq_msk_irq_qed [0:DMA_CHN_NUM-1],
+    output                      chn_irq_src_irq_qed [0:DMA_CHN_NUM-1],  // Status
+    // Interrupt reuqest control
+    output                      irq_qed             [0:DMA_CHN_NUM-1]
 );
     // Local parameters
     localparam DESC_INFO_W      = DMA_XFER_ID_W + SRC_ADDR_W + DST_ADDR_W + DMA_LENGTH_W + DMA_LENGTH_W + DMA_LENGTH_W + DMA_LENGTH_W; // transfer_id + src_addr + dest_addr + x_len + y_len + src_stride + dest_stride 
@@ -53,22 +58,37 @@ module adma_desc_queue
     wire                        desc_wr_vld [0:DMA_CHN_NUM-1];
     wire                        desc_wr_rdy [0:DMA_CHN_NUM-1];
     reg     [DMA_XFER_ID_W-1:0] xfer_id_cnt [0:DMA_CHN_NUM-1];   // 0 -> 3 -> 0 ... 
+    wire                        xfer_qed    [0:DMA_CHN_NUM-1];
 
 generate
-    for(chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : DESC_QUEUE_LOGIC
-        assign desc_wr_vld[chn_idx]     = queue_en_i[chn_idx] & desc_wr_vld_i[chn_idx];
-        assign desc_wr_rdy_o[chn_idx]   = queue_en_i[chn_idx] & desc_wr_rdy[chn_idx];
-        assign desc_wr_hsk[chn_idx]     = desc_wr_rdy_o[chn_idx] & desc_wr_vld[chn_idx];
-        assign xfer_done_clear[chn_idx] = desc_wr_hsk[chn_idx]; // Assert 1 cycle only
-        always @(posedge clk or negedge rst_n) begin
-            if(~rst_n) begin
-                xfer_id_cnt[chn_idx] <= {DMA_XFER_ID_W{1'b0}};
-            end
-            else begin
-                xfer_id_cnt[chn_idx] <= xfer_id_cnt[chn_idx] + desc_wr_hsk[chn_idx];
-            end
+for(chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : DESC_QUEUE_LOGIC
+    // Module instantiation
+    // -- Queued interrupt request generator
+    edgedet #(
+        .RISING_EDGE    (1) // RISING edge
+    ) qig (
+        .clk            (clk),
+        .rst_n          (rst_n),
+        .i              (xfer_qed[chn_idx]),
+        .en             (chn_irq_msk_irq_qed[chn_idx]),
+        .o              (irq_qed[chn_idx])
+    );
+    // Combination logic
+    assign desc_wr_vld[chn_idx]     = queue_en_i[chn_idx] & desc_wr_vld_i[chn_idx];
+    assign desc_wr_rdy_o[chn_idx]   = queue_en_i[chn_idx] & desc_wr_rdy[chn_idx];
+    assign desc_wr_hsk[chn_idx]     = desc_wr_rdy_o[chn_idx] & desc_wr_vld[chn_idx];
+    assign xfer_done_clear[chn_idx] = desc_wr_hsk[chn_idx]; // Assert 1 cycle only
+    assign xfer_qed[chn_idx]        = desc_wr_hsk[chn_idx];
+    always @(posedge clk or negedge rst_n) begin
+        if(~rst_n) begin
+            xfer_id_cnt[chn_idx] <= {DMA_XFER_ID_W{1'b0}};
+        end
+        else begin
+            xfer_id_cnt[chn_idx] <= xfer_id_cnt[chn_idx] + desc_wr_hsk[chn_idx];
         end
     end
+    
+end
 endgenerate
 
 generate

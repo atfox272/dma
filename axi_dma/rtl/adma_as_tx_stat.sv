@@ -1,6 +1,7 @@
 module adma_as_tx_stat #(
     // DMA
-    parameter DMA_LENGTH_W      = 16
+    parameter DMA_LENGTH_W      = 16,
+    parameter ATX_NUM_OSTD      = 4 // Number of outstanding transactions in AXI bus (recmd: equal to the number of channel)
 ) (
     input   clk,
     input   rst_n,
@@ -24,21 +25,21 @@ module adma_as_tx_stat #(
     sync_fifo #(
         .FIFO_TYPE      (1),
         .DATA_WIDTH     (DMA_LENGTH_W),
-        .FIFO_DEPTH     (4) // The depth of this FIFO must greater than the number of outstanding transaction (number of outstanding transaction = 2)
+        .FIFO_DEPTH     (ATX_NUM_OSTD) // The depth of this FIFO must greater than or equal to the number of outstanding transaction (number of outstanding transaction = 2)
     ) tx_stat_buf (
-        .clk           (clk),
-        .data_i        (atx_start_cnt_nxt),
-        .wr_valid_i    (atx_last_hsk), // Record when the all atx of a tx have been started
-        .wr_ready_o    (),  // The number of outstanding AXI transaction in Data move is 2, while this buffer can handle up to 4 TXs
-        .data_o        (tx_stat_num_atx),
-        .rd_valid_i    (tx_done),
-        .rd_ready_o    (tx_stat_vld),   // Pop the TX state data if the TX has just been completed
-        .empty_o       (),
-        .full_o        (),
-        .almost_empty_o(),
-        .almost_full_o (),
-        .counter       (),
-        .rst_n         (rst_n)
+        .clk            (clk),
+        .data_i         (atx_start_cnt_nxt),
+        .wr_valid_i     (atx_last_hsk), // Record when the all atx of a tx have been started
+        .wr_ready_o     (),  // The number of outstanding AXI transaction in Data move is 2, while this buffer can handle up to 4 TXs
+        .data_o         (tx_stat_num_atx),
+        .rd_valid_i     (tx_done),
+        .rd_ready_o     (tx_stat_vld),   // Pop the TX state data if the TX has just been completed
+        .empty_o        (),
+        .full_o         (),
+        .almost_empty_o (),
+        .almost_full_o  (),
+        .counter        (),
+        .rst_n          (rst_n)
     );
     // Combinational logic
     assign atx_done_cnt_nxt = atx_done_cnt + atx_done;

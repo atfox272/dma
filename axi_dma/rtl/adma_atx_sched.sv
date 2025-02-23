@@ -10,6 +10,7 @@ module adma_atx_sched
     parameter DST_ADDR_W        = 32,
     parameter MST_ID_W          = 5,
     parameter ATX_LEN_W         = 8,
+    parameter ATX_NUM_OSTD      = DMA_CHN_NUM,  // Number of outstanding transactions in AXI bus (recmd: equal to the number of channel)
     // Do not configure these
     parameter DMA_CHN_NUM_W     = $clog2(DMA_CHN_NUM)
 ) (
@@ -32,14 +33,14 @@ module adma_atx_sched
     input   [DMA_CHN_ARB_W-1:0] chn_arb_rate        [0:DMA_CHN_NUM-1],
     // AXI Transaction information
     output  [DMA_CHN_NUM_W-1:0] atx_chn_id,
-    output  [MST_ID_W-1:0]      arid,
-    output  [SRC_ADDR_W-1:0]    araddr,
-    output  [ATX_LEN_W-1:0]     arlen,
-    output  [1:0]               arburst,
-    output  [MST_ID_W-1:0]      awid,
-    output  [DST_ADDR_W-1:0]    awaddr,
-    output  [ATX_LEN_W-1:0]     awlen,
-    output  [1:0]               awburst,
+    output  [MST_ID_W-1:0]      atx_arid,
+    output  [SRC_ADDR_W-1:0]    atx_araddr,
+    output  [ATX_LEN_W-1:0]     atx_arlen,
+    output  [1:0]               atx_arburst,
+    output  [MST_ID_W-1:0]      atx_awid,
+    output  [DST_ADDR_W-1:0]    atx_awaddr,
+    output  [ATX_LEN_W-1:0]     atx_awlen,
+    output  [1:0]               atx_awburst,
     output                      atx_vld,
     input                       atx_rdy,
     // AXI Transaction control
@@ -70,7 +71,8 @@ for(chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : CHN_UNIT_
         .SRC_ADDR_W     (SRC_ADDR_W),
         .DST_ADDR_W     (DST_ADDR_W),
         .MST_ID_W       (MST_ID_W),
-        .ATX_LEN_W      (ATX_LEN_W)
+        .ATX_LEN_W      (ATX_LEN_W),
+        .ATX_NUM_OSTD   (ATX_NUM_OSTD)
     ) af (
         .clk            (clk),
         .rst_n          (rst_n),
@@ -123,14 +125,14 @@ endgenerate
         .bwd_atx_rdy    (req_atx_rdy),
         .chn_arb_rate   (chn_arb_rate),
         .fwd_atx_chn_id (atx_chn_id),
-        .fwd_arid       (arid),
-        .fwd_araddr     (araddr),
-        .fwd_arlen      (arlen),
-        .fwd_arburst    (arburst),
-        .fwd_awid       (awid),
-        .fwd_awaddr     (awaddr),
-        .fwd_awlen      (awlen),
-        .fwd_awburst    (awburst),
+        .fwd_arid       (atx_arid),
+        .fwd_araddr     (atx_araddr),
+        .fwd_arlen      (atx_arlen),
+        .fwd_arburst    (atx_arburst),
+        .fwd_awid       (atx_awid),
+        .fwd_awaddr     (atx_awaddr),
+        .fwd_awlen      (atx_awlen),
+        .fwd_awburst    (atx_awburst),
         .fwd_atx_vld    (atx_vld),
         .fwd_atx_rdy    (atx_rdy)
     );

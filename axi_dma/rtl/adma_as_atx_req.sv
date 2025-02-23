@@ -9,6 +9,7 @@ module adma_as_atx_req #(
     parameter DST_ADDR_W        = 32,
     parameter MST_ID_W          = 5,
     parameter ATX_LEN_W         = 8,
+    parameter ATX_NUM_OSTD      = DMA_CHN_NUM,  // Number of outstanding transactions in AXI bus (recmd: equal to the number of channel)
     // Do not configure these
     parameter DMA_CHN_NUM_W     = $clog2(DMA_CHN_NUM)
 ) (
@@ -47,7 +48,8 @@ module adma_as_atx_req #(
     // Module instantiation
     // -- Transaction status
     adma_as_tx_stat #(
-        .DMA_LENGTH_W       (DMA_LENGTH_W)
+        .DMA_LENGTH_W       (DMA_LENGTH_W),
+        .ATX_NUM_OSTD       (ATX_NUM_OSTD)
     ) ts (
         .clk                (clk),
         .rst_n              (rst_n),

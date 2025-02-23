@@ -27,9 +27,7 @@ module adma_cm_chn_unit
     input                       chn_xfer_2d,
     input                       chn_xfer_cyclic,
     input                       chn_irq_msk_irq_com,
-    input                       chn_irq_msk_irq_qed,
     output                      chn_irq_src_irq_com,  // Status
-    output                      chn_irq_src_irq_qed,  // Status
     input   [1:0]               atx_src_burst,  
     input   [1:0]               atx_dst_burst,  
     output  [DMA_DESC_DEPTH-1:0]xfer_done,      // Status
@@ -42,7 +40,9 @@ module adma_cm_chn_unit
     output                      tx_vld,
     input                       tx_rdy,
     // Transaction control
-    input                       tx_done
+    input                       tx_done,
+    // Interrupt request control
+    output                      irq_com
 );
     // Internal signals
     wire [DMA_DESC_DEPTH-1:0]   xfer_done_set;
@@ -69,9 +69,7 @@ module adma_cm_chn_unit
         .chn_xfer_2d            (chn_xfer_2d),
         .chn_xfer_cyclic        (chn_xfer_cyclic),
         .chn_irq_msk_irq_com    (chn_irq_msk_irq_com),
-        .chn_irq_msk_irq_qed    (chn_irq_msk_irq_qed),
         .chn_irq_src_irq_com    (chn_irq_src_irq_com),
-        .chn_irq_src_irq_qed    (chn_irq_src_irq_qed),
         .atx_src_burst          (atx_src_burst),
         .atx_dst_burst          (atx_dst_burst),
         .active_xfer_id         (active_xfer_id),
@@ -94,5 +92,15 @@ module adma_cm_chn_unit
         .xfer_done_set          (xfer_done_set),
         .xfer_done              (xfer_done),
         .chn_xfer_cyclic        (chn_xfer_cyclic)
+    );
+    // Completion interrupt request generator
+    edgedet #(
+        .RISING_EDGE            (1) // RISING edge
+    ) cig (
+        .clk                    (clk),
+        .rst_n                  (rst_n),
+        .i                      (|xfer_done),   // One of 4 transfers in the channel has been done
+        .en                     (chn_irq_msk_irq_com),
+        .o                      (irq_com)
     );
 endmodule

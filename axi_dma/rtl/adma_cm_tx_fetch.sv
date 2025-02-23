@@ -25,9 +25,7 @@ module adma_cm_tx_fetch
     input                       chn_xfer_2d,
     input                       chn_xfer_cyclic,
     input                       chn_irq_msk_irq_com,
-    input                       chn_irq_msk_irq_qed,
     output                      chn_irq_src_irq_com,  // Status
-    output                      chn_irq_src_irq_qed,  // Status
     input   [1:0]               atx_src_burst,  
     input   [1:0]               atx_dst_burst,  
     output  [DMA_XFER_ID_W-1:0] active_xfer_id,     // Status

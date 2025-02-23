@@ -28,9 +28,7 @@ module adma_chn_man
     input                       chn_xfer_2d         [0:DMA_CHN_NUM-1],
     input                       chn_xfer_cyclic     [0:DMA_CHN_NUM-1],
     input                       chn_irq_msk_irq_com [0:DMA_CHN_NUM-1],
-    input                       chn_irq_msk_irq_qed [0:DMA_CHN_NUM-1],
     output                      chn_irq_src_irq_com [0:DMA_CHN_NUM-1],  // Status
-    output                      chn_irq_src_irq_qed [0:DMA_CHN_NUM-1],  // Status
     input   [1:0]               atx_src_burst       [0:DMA_CHN_NUM-1],  
     input   [1:0]               atx_dst_burst       [0:DMA_CHN_NUM-1],  
     output  [DMA_DESC_DEPTH-1:0]xfer_done           [0:DMA_CHN_NUM-1],  // Status
@@ -43,7 +41,9 @@ module adma_chn_man
     output                      tx_vld              [0:DMA_CHN_NUM-1],
     input                       tx_rdy              [0:DMA_CHN_NUM-1],
     // Transaction control
-    input                       tx_done             [0:DMA_CHN_NUM-1]
+    input                       tx_done             [0:DMA_CHN_NUM-1],
+    // Interrupt request control
+    output                      irq_com             [0:DMA_CHN_NUM-1]
 );
     // Local variables
     genvar chn_idx;
@@ -72,9 +72,7 @@ generate
             .chn_xfer_2d        (chn_xfer_2d[chn_idx]),
             .chn_xfer_cyclic    (chn_xfer_cyclic[chn_idx]),
             .chn_irq_msk_irq_com(chn_irq_msk_irq_com[chn_idx]),
-            .chn_irq_msk_irq_qed(chn_irq_msk_irq_qed[chn_idx]),
             .chn_irq_src_irq_com(chn_irq_src_irq_com[chn_idx]),
-            .chn_irq_src_irq_qed(chn_irq_src_irq_qed[chn_idx]),
             .atx_src_burst      (atx_src_burst[chn_idx]),
             .atx_dst_burst      (atx_dst_burst[chn_idx]),
             .xfer_done          (xfer_done[chn_idx]),
@@ -85,7 +83,8 @@ generate
             .tx_len             (tx_len[chn_idx]),
             .tx_vld             (tx_vld[chn_idx]),
             .tx_rdy             (tx_rdy[chn_idx]),
-            .tx_done            (tx_done[chn_idx])
+            .tx_done            (tx_done[chn_idx]),
+            .irq_com            (irq_com[chn_idx])
         );
     end
 endgenerate
