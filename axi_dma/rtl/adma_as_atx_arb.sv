@@ -58,7 +58,7 @@ module adma_as_atx_arb #(
         .rst_n          (rst_n),
         .req_i          (chn_req),
         .req_weight_i   (chn_req_weight),
-        .num_grant_req_i(1'b1),
+        .num_grant_req_i(3'd1),
         .grant_ready_i  (fwd_hsk),
         .grant_valid_o  (chn_grnt)
     );

@@ -10,11 +10,14 @@ module adma_dm_rd_host #(
     parameter ATX_RESP_W        = 2,
     parameter ATX_SRC_DATA_W    = 256,
     parameter ATX_NUM_OSTD      = DMA_CHN_NUM,   // Number of outstanding transactions in AXI bus (recmd: equal to the number of channel)
-    parameter ATX_INTL_DEPTH    = 16 // Interleaving depth on the AXI data channel 
+    parameter ATX_INTL_DEPTH    = 16, // Interleaving depth on the AXI data channel 
+    // Do not configure these
+    parameter DMA_CHN_NUM_W     = (DMA_CHN_NUM > 1) ? $clog2(DMA_CHN_NUM) : 1
 ) (
     input                           clk,
     input                           rst_n,
     // AXI Transaction information
+    input   [DMA_CHN_NUM_W-1:0]     atx_chn_id,
     input   [MST_ID_W-1:0]          atx_arid,
     input   [SRC_ADDR_W-1:0]        atx_araddr,
     input   [ATX_LEN_W-1:0]         atx_arlen,

@@ -12,6 +12,8 @@ module adma_as_tx_stat #(
     // Transaction control
     output  tx_done
 );
+    // Local parameters 
+    localparam TX_STAT_AMT = (ATX_NUM_OSTD > 1) ? ATX_NUM_OSTD : 2; // Minimun TX status buffer is 2
     // Internal signal
     wire    [DMA_LENGTH_W-1:0]  atx_done_cnt_nxt;
     wire    [DMA_LENGTH_W-1:0]  atx_start_cnt_nxt;
@@ -25,7 +27,7 @@ module adma_as_tx_stat #(
     sync_fifo #(
         .FIFO_TYPE      (1),
         .DATA_WIDTH     (DMA_LENGTH_W),
-        .FIFO_DEPTH     (ATX_NUM_OSTD) // The depth of this FIFO must greater than or equal to the number of outstanding transaction (number of outstanding transaction = 2)
+        .FIFO_DEPTH     (TX_STAT_AMT) // The depth of this FIFO must greater than or equal to the number of outstanding transaction (number of outstanding transaction = 2)
     ) tx_stat_buf (
         .clk            (clk),
         .data_i         (atx_start_cnt_nxt),

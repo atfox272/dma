@@ -11,10 +11,10 @@ module adma_data_mover #(
     parameter ATX_RESP_W        = 2,
     parameter ATX_SRC_DATA_W    = 256,
     parameter ATX_DST_DATA_W    = 256,
-    parameter ATX_NUM_OSTD      = DMA_CHN_NUM,   // Number of outstanding transactions in AXI bus (recmd: equal to the number of channel)
+    parameter ATX_NUM_OSTD      = (DMA_CHN_NUM > 1) ? DMA_CHN_NUM : 2,   // Number of outstanding transactions in AXI bus (recmd: equal to the number of channel)
     parameter ATX_INTL_DEPTH    = 16, // Interleaving depth on the AXI data channel 
     // Do not configure these
-    parameter DMA_CHN_NUM_W     = $clog2(DMA_CHN_NUM)
+    parameter DMA_CHN_NUM_W     = (DMA_CHN_NUM > 1) ? $clog2(DMA_CHN_NUM) : 1
 ) (
     input                           clk,
     input                           rst_n,
@@ -94,6 +94,7 @@ module adma_data_mover #(
     ) rh (
         .clk            (clk),
         .rst_n          (rst_n),
+        .atx_chn_id     (atx_chn_id),
         .atx_arid       (atx_arid),
         .atx_araddr     (atx_araddr),
         .atx_arlen      (atx_arlen),

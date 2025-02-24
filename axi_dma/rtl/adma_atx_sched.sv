@@ -10,9 +10,9 @@ module adma_atx_sched
     parameter DST_ADDR_W        = 32,
     parameter MST_ID_W          = 5,
     parameter ATX_LEN_W         = 8,
-    parameter ATX_NUM_OSTD      = DMA_CHN_NUM,  // Number of outstanding transactions in AXI bus (recmd: equal to the number of channel)
+    parameter ATX_NUM_OSTD      = (DMA_CHN_NUM > 1) ? DMA_CHN_NUM : 2,  // Number of outstanding transactions in AXI bus (recmd: equal to the number of channel)
     // Do not configure these
-    parameter DMA_CHN_NUM_W     = $clog2(DMA_CHN_NUM)
+    parameter DMA_CHN_NUM_W     = (DMA_CHN_NUM > 1) ? $clog2(DMA_CHN_NUM) : 1
 ) (
     input                       clk,
     input                       rst_n,
@@ -100,6 +100,8 @@ for(chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : CHN_UNIT_
     );
 end
 endgenerate
+generate
+if(DMA_CHN_NUM > 1) begin : MULTIPLE_CHANNEL_MODE
     // -- AXI Transaction arbiter
     adma_as_atx_arb #(
         .DMA_CHN_NUM    (DMA_CHN_NUM),
@@ -136,4 +138,20 @@ endgenerate
         .fwd_atx_vld    (atx_vld),
         .fwd_atx_rdy    (atx_rdy)
     );
+end
+else begin : SINGLE_CHANNEL_MODE
+    // -- Bypass
+    assign atx_chn_id   = 1'b0;
+    assign atx_arid     = req_arid[0]; 
+    assign atx_araddr   = req_araddr[0]; 
+    assign atx_arlen    = req_arlen[0]; 
+    assign atx_arburst  = req_arburst[0]; 
+    assign atx_awid     = req_awid[0]; 
+    assign atx_awaddr   = req_awaddr[0]; 
+    assign atx_awlen    = req_awlen[0]; 
+    assign atx_awburst  = req_awburst[0]; 
+    assign atx_vld      = req_atx_vld[0]; 
+    assign req_atx_rdy[0] = atx_rdy;
+end
+endgenerate
 endmodule

@@ -126,7 +126,7 @@ module adma_reg_map
         .STAT_BASE_ADDR     (RO_REG_ADDR),
         .STAT_OFFSET        (8'h01),// Word-access
         .STAT_REG_NUM       (RO_REG_NUM),
-        .ST_WR_BASE_ADDR    (RW1S_REG_NUM),
+        .ST_WR_BASE_ADDR    (RW1S_REG_ADDR),
         .ST_WR_OFFSET       (RW1S_REG_OFFSET),
         .ST_WR_FIFO_NUM     (RW1S_REG_NUM),
         .ST_WR_FIFO_DEPTH   (2)
@@ -177,35 +177,35 @@ module adma_reg_map
     // Registers Mapping
 generate
     // -- RW registers (Base 0x0000)
-        assign dma_en                       = rw_reg[                            4'h00  ][0];
+        assign dma_en                       = rw_reg[                            'h00  ][0];
     for (chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : RW_CON_GEN
-        assign chn_ctrl_en[chn_idx]         = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h01  ][0];
-        assign chn_xfer_2d[chn_idx]         = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h02  ][0];
-        assign chn_xfer_cyclic[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h02  ][1];
-        assign chn_irq_msk_irq_com[chn_idx] = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h03  ][0];
-        assign chn_irq_msk_irq_qed[chn_idx] = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h03  ][1];
-        assign chn_arb_rate[chn_idx]        = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h04  ][DMA_CHN_ARB_W-1:0];
+        assign chn_ctrl_en[chn_idx]         = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h01  ][0];
+        assign chn_xfer_2d[chn_idx]         = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h02  ][0];
+        assign chn_xfer_cyclic[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h02  ][1];
+        assign chn_irq_msk_irq_com[chn_idx] = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h03  ][0];
+        assign chn_irq_msk_irq_qed[chn_idx] = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h03  ][1];
+        assign chn_arb_rate[chn_idx]        = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h04  ][DMA_CHN_ARB_W-1:0];
 
-        assign atx_id[chn_idx]              = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h05  ][MST_ID_W-1:0];
-        assign atx_src_burst[chn_idx]       = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h06  ][1:0];
-        assign atx_dst_burst[chn_idx]       = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h07  ][1:0];
-        assign atx_wd_per_burst[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h08  ][DMA_LENGTH_W-1:0];
+        assign atx_id[chn_idx]              = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h05  ][MST_ID_W-1:0];
+        assign atx_src_burst[chn_idx]       = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h06  ][1:0];
+        assign atx_dst_burst[chn_idx]       = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h07  ][1:0];
+        assign atx_wd_per_burst[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h08  ][DMA_LENGTH_W-1:0];
         
-        assign desc_src_addr_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h09  ][SRC_ADDR_W-1:0];
-        assign desc_dst_addr_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0A  ][DST_ADDR_W-1:0];
-        assign desc_xfer_xlen_o[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0B  ][DMA_LENGTH_W-1:0];
-        assign desc_xfer_ylen_o[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0C  ][DMA_LENGTH_W-1:0];
-        assign desc_src_strd_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0D  ][DMA_LENGTH_W-1:0];
-        assign desc_dst_strd_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h0E  ][DMA_LENGTH_W-1:0];
+        assign desc_src_addr_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h09  ][SRC_ADDR_W-1:0];
+        assign desc_dst_addr_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0A  ][DST_ADDR_W-1:0];
+        assign desc_xfer_xlen_o[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0B  ][DMA_LENGTH_W-1:0];
+        assign desc_xfer_ylen_o[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0C  ][DMA_LENGTH_W-1:0];
+        assign desc_src_strd_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0D  ][DMA_LENGTH_W-1:0];
+        assign desc_dst_strd_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0E  ][DMA_LENGTH_W-1:0];
     end
 
     // -- RO registers  (Base 0x2000)
     for (chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : RO_CON_GEN
-        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h00 ] = {{(S_DATA_W-2){1'b0}},              chn_irq_src_irq_qed[chn_idx],   chn_irq_src_irq_com[chn_idx]};
-        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h01 ] = {{(S_DATA_W-DMA_XFER_ID_W){1'b0}},                                  xfer_id[chn_idx]            };
-        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h02 ] = {{(S_DATA_W-DMA_DESC_DEPTH){1'b0}},                                 xfer_done[chn_idx]          };
-        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h03 ] = {{(S_DATA_W-DMA_XFER_ID_W){1'b0}},                                  active_xfer_id[chn_idx]     };
-        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 4'h04 ] = {{(S_DATA_W-DMA_LENGTH_W){1'b0}},                                   active_xfer_len[chn_idx]    };
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h00 ] = {{(S_DATA_W-2){1'b0}},               chn_irq_src_irq_qed[chn_idx],   chn_irq_src_irq_com[chn_idx]};
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h01 ] = {{(S_DATA_W-DMA_XFER_ID_W){1'b0}},                                   xfer_id[chn_idx]            };
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h02 ] = {{(S_DATA_W-DMA_DESC_DEPTH){1'b0}},                                  xfer_done[chn_idx]          };
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h03 ] = {{(S_DATA_W-DMA_XFER_ID_W){1'b0}},                                   active_xfer_id[chn_idx]     };
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h04 ] = {{(S_DATA_W-DMA_LENGTH_W){1'b0}},                                    active_xfer_len[chn_idx]    };
     end
 
     // -- RW1S registers (Base 0x1000)

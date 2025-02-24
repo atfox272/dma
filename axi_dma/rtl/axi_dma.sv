@@ -1,7 +1,7 @@
 module axi_dma #(
     // DMA
     parameter DMA_BASE_ADDR     = 32'h8000_0000,
-    parameter DMA_CHN_NUM       = 4,    // Number of DMA channels
+    parameter DMA_CHN_NUM       = 1,    // Number of DMA channels
     parameter DMA_LENGTH_W      = 16,   // Maximum size of 1 transfer is (2^16 * 256) 
     parameter DMA_DESC_DEPTH    = 4,    // The maximum number of descriptors in each channel
     parameter DMA_CHN_ARB_W     = 3,    // Channel arbitration weight's width
@@ -20,7 +20,7 @@ module axi_dma #(
     parameter ATX_LEN_W         = 8,
     parameter ATX_SIZE_W        = 3,
     parameter ATX_RESP_W        = 2,
-    parameter ATX_NUM_OSTD      = DMA_CHN_NUM,  // Number of outstanding transactions in AXI bus (recmd: equal to the number of channel)
+    parameter ATX_NUM_OSTD      = (DMA_CHN_NUM > 1) ? DMA_CHN_NUM : 2,  // Number of outstanding transactions in AXI bus (recmd: equal to the number of channel - min: equal to 2)
     parameter ATX_INTL_DEPTH    = 16 // Interleaving depth on the AXI data channel 
 ) (
     input                           aclk,
@@ -98,7 +98,7 @@ module axi_dma #(
 );
     // Local parameters
     localparam DMA_XFER_ID_W        = $clog2(DMA_DESC_DEPTH);
-    localparam DMA_CHN_NUM_W        = $clog2(DMA_CHN_NUM);
+    localparam DMA_CHN_NUM_W        = (DMA_CHN_NUM > 1) ? $clog2(DMA_CHN_NUM) : 1;
     // Internal variables 
     genvar chn_idx;
     // Internal connection
@@ -247,8 +247,8 @@ module axi_dma #(
         .DST_ADDR_W         (DST_ADDR_W),
         .DMA_LENGTH_W       (DMA_LENGTH_W)
     ) dq (
-        .clk                (clk),
-        .rst_n              (rst_n),
+        .clk                (aclk),
+        .rst_n              (aresetn),
         .queue_en_glb_i     (dma_en),
         .queue_en_i         (chn_ctrl_en),
         .src_addr_i         (desc_wr_src_addr),
@@ -282,8 +282,8 @@ module axi_dma #(
         .DST_ADDR_W         (DST_ADDR_W),
         .DMA_LENGTH_W       (DMA_LENGTH_W)
     ) cm (
-        .clk                (clk),
-        .rst_n              (rst_n),
+        .clk                (aclk),
+        .rst_n              (aresetn),
         .xfer_id_i          (desc_rd_xfer_id),
         .src_addr_i         (desc_rd_src_addr),
         .dst_addr_i         (desc_rd_dst_addr),
@@ -322,8 +322,8 @@ module axi_dma #(
         .ATX_LEN_W          (ATX_LEN_W),
         .ATX_NUM_OSTD       (ATX_NUM_OSTD)
     ) as (
-        .clk                (clk),
-        .rst_n              (rst_n),
+        .clk                (aclk),
+        .rst_n              (aresetn),
         .tx_src_addr        (tx_src_addr),
         .tx_dst_addr        (tx_dst_addr),
         .tx_len             (tx_len),
@@ -363,8 +363,8 @@ module axi_dma #(
         .ATX_NUM_OSTD       (ATX_NUM_OSTD),
         .ATX_INTL_DEPTH     (ATX_INTL_DEPTH)
     ) dm (
-        .clk                (clk),
-        .rst_n              (rst_n),
+        .clk                (aclk),
+        .rst_n              (aresetn),
         .atx_chn_id         (atx_chn_id),
         .atx_arid           (atx_arid),
         .atx_araddr         (atx_araddr),

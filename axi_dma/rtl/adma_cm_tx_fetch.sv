@@ -50,6 +50,7 @@ module adma_cm_tx_fetch
     wire    [DST_ADDR_W-1:0]    dst_addr;
     wire    [DMA_LENGTH_W-1:0]  xfer_xlen;
     wire    [DMA_LENGTH_W-1:0]  xfer_ylen;
+    wire    [DMA_LENGTH_W-1:0]  xfer_ylen_flt;  // Filtered y_length -> In 1-D mode, y_length value = 0
     wire    [DMA_LENGTH_W-1:0]  src_stride;
     wire    [DMA_LENGTH_W-1:0]  dst_stride;
     wire                        desc_proc_vld;
@@ -88,7 +89,7 @@ module adma_cm_tx_fetch
         .src_addr       (src_addr),
         .dst_addr       (dst_addr),
         .xfer_xlen      (xfer_xlen),
-        .xfer_ylen      (xfer_ylen),
+        .xfer_ylen      (xfer_ylen_flt),
         .src_stride     (src_stride),
         .dst_stride     (dst_stride),
         .xfer_vld       (xs_xfer_vld),
@@ -112,4 +113,5 @@ module adma_cm_tx_fetch
     assign desc_proc_rdy    = xs_xfer_rdy & (~chn_xfer_cyclic); // In Cyclic mode -> Never pop the processed descriptor register -> Repeat this descriptor
     assign active_xfer_id   = xfer_id;  // Transfer is in processed transfer register
     assign active_xfer_len  = xfer_xlen;
+    assign xfer_ylen_flt    = xfer_ylen & {DMA_LENGTH_W{chn_xfer_2d}}; // In 1D transfer mode (chn_xfer_2d = 1'b0) -> xfer_ylen_flt = 18'h00
 endmodule
