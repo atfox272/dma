@@ -4,36 +4,60 @@
 `define RST_DLY_START   3
 `define RST_DUR         9
 
-// `define CONF_MODE_ONLY
-// `define WR_ST_MODE
-// `define RD_ST_MODE 
-// `define CUSTOMIZE_MODE
+`define ATX_MAX_LENGTH  128
 
-`define END_TIME        500000
+`define END_TIME        50000
 
 // Slave device physical timing simulation
 `define SLV_DVC_LATENCY 2 // Time unit
+
+
+// -- Delay
+parameter                       RREADY_STALL_MAX        = 2;
+parameter                       ARREADY_STALL_MAX       = 2;
+parameter                       AWREADY_STALL_MAX       = 2;
+parameter                       WREADY_STALL_MAX        = 2;
+parameter                       BREADY_STALL_MAX        = 2;
+
+parameter DMA_BASE_ADDR     = 32'h8000_0000;
+parameter DMA_CHN_NUM       = 1;    // Number of DMA channels
+parameter DMA_LENGTH_W      = 16;   // Maximum size of 1 transfer is (2^16 * 256) 
+parameter DMA_DESC_DEPTH    = 4;    // The maximum number of descriptors in each channel
+parameter DMA_CHN_ARB_W     = 3;    // Channel arbitration weight's width
+parameter ROB_EN            = 0;    // Reorder multiple AXI outstanding transactions enable
+parameter DESC_QUEUE_TYPE   = (DMA_DESC_DEPTH >= 16) ? "RAM-BASED" : "FLIPFLOP-BASED";
+parameter ATX_SRC_DATA_W    = 256;
+parameter ATX_DST_DATA_W    = 256;
+parameter S_DATA_W          = 32;
+parameter S_ADDR_W          = 32;
+parameter SRC_ADDR_W        = 32;
+parameter DST_ADDR_W        = 32;
+parameter MST_ID_W          = 5;
+parameter ATX_LEN_W         = 8;
+parameter ATX_SIZE_W        = 3;
+parameter ATX_RESP_W        = 2;
+parameter ATX_NUM_OSTD      = (DMA_CHN_NUM > 1) ? DMA_CHN_NUM : 2;  // Number of outstanding transactions in AXI bus (recmd: equal to the number of channel)
+parameter ATX_INTL_DEPTH    = 16; // Interleaving depth on the AXI data channel 
+
+typedef struct {
+    bit                     trans_type; // Write(1) / read(0) transaction
+    bit [MST_ID_W-1:0]      axid;
+    bit [DST_ADDR_W-1:0]    axaddr;
+    bit [1:0]               axburst;
+    bit [ATX_LEN_W-1:0]     axlen;
+    bit [ATX_SIZE_W-1:0]    axsize;
+} atx_ax_info;
+
+typedef struct {
+    bit [DST_ADDR_W-1:0]    wdata [`ATX_MAX_LENGTH];
+} atx_w_info;
+
+typedef struct {
+    bit [MST_ID_W-1:0]      bid;
+    bit [ATX_RESP_W-1:0]    bresp;
+} atx_b_info;
+
 module axi_dma_tb;
-    
-    parameter DMA_BASE_ADDR     = 32'h8000_0000;
-    parameter DMA_CHN_NUM       = 1;    // Number of DMA channels
-    parameter DMA_LENGTH_W      = 16;   // Maximum size of 1 transfer is (2^16 * 256) 
-    parameter DMA_DESC_DEPTH    = 4;    // The maximum number of descriptors in each channel
-    parameter DMA_CHN_ARB_W     = 3;    // Channel arbitration weight's width
-    parameter ROB_EN            = 0;    // Reorder multiple AXI outstanding transactions enable
-    parameter DESC_QUEUE_TYPE   = (DMA_DESC_DEPTH >= 16) ? "RAM-BASED" : "FLIPFLOP-BASED";
-    parameter ATX_SRC_DATA_W    = 256;
-    parameter ATX_DST_DATA_W    = 256;
-    parameter S_DATA_W          = 32;
-    parameter S_ADDR_W          = 32;
-    parameter SRC_ADDR_W        = 32;
-    parameter DST_ADDR_W        = 32;
-    parameter MST_ID_W          = 5;
-    parameter ATX_LEN_W         = 8;
-    parameter ATX_SIZE_W        = 3;
-    parameter ATX_RESP_W        = 2;
-    parameter ATX_NUM_OSTD      = (DMA_CHN_NUM > 1) ? DMA_CHN_NUM : 2;  // Number of outstanding transactions in AXI bus (recmd: equal to the number of channel)
-    parameter ATX_INTL_DEPTH    = 16; // Interleaving depth on the AXI data channel 
 
     logic                           aclk;
     logic                           aresetn;
@@ -187,7 +211,7 @@ module axi_dma_tb;
         $finish;
     end
 
-    initial begin   : SEQUENCER_DRIVER
+    initial begin   : MASTER_DRIVER
         #(`RST_DLY_START + `RST_DUR + 1);
         fork 
             begin   : AW_chn
@@ -273,6 +297,11 @@ module axi_dma_tb;
         join_none
     end
 
+    initial begin : SLAVE_DRIVER
+        #(`RST_DLY_START + `RST_DUR + 1);
+        slave_driver;
+    end
+
     /*          AXI4 monitor            */
     initial begin   : AXI4_MONITOR
         #(`RST_DLY_START + `RST_DUR + 1);
@@ -335,7 +364,11 @@ module axi_dma_tb;
     end
     /*          AXI4 monitor            */
 
-   /* DeepCode */
+   /*           DeepCode                */
+    task automatic aclk_cl;
+        @(posedge aclk);
+        #0.2; 
+    endtask
     task automatic s_aw_transfer(
         input [MST_ID_W-1:0]    s_awid,
         input [S_ADDR_W-1:0]    s_awaddr,
@@ -375,9 +408,217 @@ module axi_dma_tb;
         // Handshake occur
         wait(s_arready_o == 1'b1); #0.1;
     endtask
+    
+    /////////////////////////////////////////////////
+    task automatic m_aw_receive(
+        output  [MST_ID_W-1:0]      awid,
+        output  [DST_ADDR_W-1:0]    awaddr,
+        output  [1:0]               awburst,
+        output  [ATX_LEN_W-1:0]     awlen
+        // output      [ATX_SIZE_W-1:0]    awsize
+    );
+        // Wait for BVALID
+        wait(m_awvalid_o == 1'b1); #0.1;
+        awid    = m_awid_o;
+        awaddr  = m_awaddr_o;
+        awburst = m_awburst_o;
+        awlen   = m_awlen_o; 
+        // awsize  = m_awsize_o; 
+    endtask
+    task automatic m_w_receive (
+        output  [ATX_DST_DATA_W-1:0]    wdata,
+        output                          wlast
+    );
+        wait(m_wvalid_o == 1'b1); #0.1;
+        wdata   = m_wdata_o;
+        wlast   = m_wlast_o;
+    endtask
+    task automatic m_b_transfer (
+        input [MST_ID_W-1:0]    bid,
+        input [ATX_RESP_W-1:0]  bresp
+    );
+        aclk_cl;
+        m_bid_i     <= bid;
+        m_bresp_i   <= bresp;
+        m_bvalid_i  <= 1'b1;
+        // Wait for handshaking
+        wait(m_bready_o == 1'b1); #0.1;
+    endtask
+    task automatic m_ar_receive(
+        output  [MST_ID_W-1:0]      arid,
+        output  [DST_ADDR_W-1:0]    araddr,
+        output  [1:0]               arburst,
+        output  [ATX_LEN_W-1:0]     arlen
+        // output  [ATX_SIZE_W-1:0]    arsize
+    );
+        // Wait for BVALID
+        wait(m_arvalid_o == 1'b1); #0.1;
+        arid    = m_arid_o;
+        araddr  = m_araddr_o;
+        arburst = m_arburst_o;
+        arlen   = m_arlen_o; 
+        // arsize  = m_arsize_o; 
+    endtask
+    task automatic m_r_transfer (
+        input [MST_ID_W-1:0]    rid, 
+        input [DST_ADDR_W-1:0]  rdata,
+        input [ATX_RESP_W-1:0]  rresp,
+        input                   rlast
+    );
+        aclk_cl;
+        m_rid_i     <= rid;
+        m_rdata_i   <= rdata;
+        m_rresp_i   <= rresp;
+        m_rlast_i   <= rlast;
+        m_rvalid_i  <= 1'b1;
+        // Wait for handshaking
+        #0.1;
+        wait(m_rready_o == 1'b1); #0.1;
+    endtask
+    /////////////////////////////////////////////////
 
-    task automatic aclk_cl;
-        @(posedge aclk);
-        #0.2; 
+    mailbox #(atx_ax_info)  m_drv_aw_info;
+    mailbox #(atx_b_info)   m_drv_b_info;
+    mailbox #(atx_ax_info)  m_drv_ar_info;
+
+    
+    task automatic rand_stall_cycle(input int stall_max);
+        int slave_stall_1cycle;
+        slave_stall_1cycle = $urandom_range(0, stall_max);
+        for(int stall_num = 0; stall_num < slave_stall_1cycle; stall_num = stall_num + 1) begin
+            aclk_cl;
+        end
+    endtask
+
+    task automatic slave_driver;
+        m_drv_aw_info   = new();
+        m_drv_b_info    = new();
+        m_drv_ar_info   = new();
+        fork
+            begin   : AW_CHN
+                atx_ax_info aw_temp;
+                forever begin
+                    m_arready_i = 1'b1;
+                    m_aw_receive (
+                        .awid   (aw_temp.axid),
+                        .awaddr (aw_temp.axaddr),
+                        .awburst(aw_temp.axburst),
+                        .awlen  (aw_temp.axlen)
+                        // .awsize (aw_temp.axsize)
+                    );
+                    // Store AW info 
+                    m_drv_aw_info.put(aw_temp);
+                    // Handshake occurs
+                    aclk_cl;
+                    // Stall random
+                    m_arready_i = 1'b0;
+                    rand_stall_cycle(AWREADY_STALL_MAX);
+                end
+            end
+            begin   : W_CHN
+                atx_ax_info aw_temp;
+                atx_w_info  w_temp;
+                atx_b_info  b_temp;
+                bit         wlast_temp;
+                forever begin
+                    if(m_drv_aw_info.try_get(aw_temp)) begin
+                        for(int i = 0; i <= aw_temp.axlen; i = i + 1) begin
+                            // Assert WREADY
+                            m_wready_i = 1'b1;
+                            m_w_receive (
+                                .wdata(w_temp.wdata[i]),
+                                .wlast(wlast_temp)
+                            );
+                            // WDATA predictor
+                            if(w_temp.wdata[i] == i) begin
+                                // Pass
+                            end
+                            else begin
+                                $display("[FAIL]: Destination - Sample WDATA[%1d] = %h and Golden WDATA = %h)", i, w_temp.wdata[i], i);
+                                $stop;
+                            end
+                            // WLAST predictor
+                            if(wlast_temp == (i == aw_temp.axlen)) begin
+                            
+                            end
+                            else begin
+                                $display("[FAIL]: Destination - Wrong sample WLAST = %0d at WDATA = %8h (idx: %0d, AWLEN: %2d)", wlast_temp, w_temp.wdata[i], i, aw_temp.axlen);
+                                $stop;
+                            end
+                            // Handshake occurs 
+                            aclk_cl;
+                            // Stall random
+                            m_wready_i = 1'b0;
+                            rand_stall_cycle(WREADY_STALL_MAX);
+                        end
+                        // Generate B transfer
+                        b_temp.bid      = aw_temp.axid;
+                        b_temp.bresp    = 2'b00;
+                        m_drv_b_info.put(b_temp);
+                    end
+                    else begin
+                        // Wait 1 cycle
+                        aclk_cl;
+                        m_wready_i = 1'b0;
+                    end
+                end
+            end
+            begin   : B_CHN
+                atx_b_info  b_temp;
+                forever begin
+                    if(m_drv_b_info.try_get(b_temp)) begin
+                        m_b_transfer (
+                            .bid(b_temp.bid),
+                            .bresp(b_temp.bresp)
+                        );
+                        $display("[INFO]: Destination - The transaction with ID-%0h has been completed", b_temp.bid);
+                    end
+                    else begin
+                        // Wait 1 cycle
+                        aclk_cl;
+                        m_bvalid_i = 1'b0;
+                    end
+                end
+            end
+            begin   : AR_CHN
+                atx_ax_info ar_temp;
+                forever begin
+                    m_arready_i = 1'b1;
+                    m_ar_receive (
+                        .arid   (ar_temp.axid),
+                        .araddr (ar_temp.axaddr),
+                        .arburst(ar_temp.axburst),
+                        .arlen  (ar_temp.axlen)
+                    );
+                    // Handshake occurs
+                    aclk_cl;
+                    // Store AW info 
+                    m_drv_ar_info.put(ar_temp);
+                    // Stall random
+                    m_arready_i = 1'b0;
+                    rand_stall_cycle(ARREADY_STALL_MAX);
+                end
+            end
+            begin   : R_CHN
+                atx_ax_info ar_temp;
+                forever begin
+                    if(m_drv_ar_info.try_get(ar_temp)) begin
+                        for(int i = 0; i <= ar_temp.axlen; i = i + 1) begin
+                            m_r_transfer (
+                                .rid(ar_temp.axid),
+                                .rdata(i),
+                                .rresp(2'b00),
+                                .rlast(i == ar_temp.axlen)
+                            );
+                        end
+                    end
+                    else begin
+                        // Wait 1 cycle
+                        aclk_cl;
+                        m_rvalid_i = 1'b0;
+                    end
+                end
+            end 
+        join_none
     endtask
 endmodule

@@ -118,7 +118,7 @@ module adma_cm_tf_split
     assign rem_i_dst_addr   = new_dst_addr + (rem_i_dst_stride & {DMA_LENGTH_W{~|(atx_dst_burst^BURST_INCR)}}); // If (in burst increment mode) -> new_dst_addr = old_dst_addr + dst_stride
     assign rem_i_src_addr   = new_src_addr + (rem_i_src_stride & {DMA_LENGTH_W{~|(atx_src_burst^BURST_INCR)}}); // If (in burst increment mode) -> new_src_addr = old_src_addr + src_stride
     assign rem_i_xfer_ylen  = new_xfer_ylen - 1'b1;
-    assign rem_i_xfer_vld   = (|new_xfer_ylen); // Asssert if (y_length != 0)
+    assign rem_i_xfer_vld   = (|new_xfer_ylen) & new_xfer_vld; // Asssert if (y_length != 0) & (new sub-xfer is valid)
     assign rem_o_xfer_rdy   = new_xfer_rdy & rem_o_xfer_vld;
     // -- Transaction gen
     assign tx_src_addr      = new_src_addr;
@@ -126,7 +126,7 @@ module adma_cm_tf_split
     assign tx_len           = new_xfer_xlen;
     assign tx_vld           = new_xfer_vld;
     // -- Backward Transfer
-    assign xfer_rdy         = ~|(proc_tx_num^(done_tx_num-1'b1)) & tx_done; //  The last TX has been done -> Pop transfer when the (Transfer done completely) 
+    assign xfer_rdy         = ~|(proc_tx_num^(done_tx_num+1'b1)) & tx_done; //  The last TX has been done -> Pop transfer when the (Transfer done completely) 
 generate
 for(xfer_idx = 0; xfer_idx < DMA_DESC_DEPTH; xfer_idx = xfer_idx + 1) begin : XFER_DONE_LOGIC
     assign xfer_done_set[xfer_idx] = (xfer_idx == new_xfer_id) & xfer_rdy;  // Map to the corresponding ID of TRANSFER_DONE register 
@@ -156,7 +156,7 @@ endgenerate
                 done_tx_num <= {DMA_LENGTH_W{1'b0}};
             end
             else begin
-                done_tx_num <= proc_tx_num + tx_done;    // Increases when TX done
+                done_tx_num <= done_tx_num + tx_done;    // Increases when TX done
             end
         end
     end
