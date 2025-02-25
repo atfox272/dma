@@ -78,7 +78,7 @@ module adma_as_atx_fetch #(
     assign tx_rem_flg       = tx_spl_vld & (tx_len_spl > atx_wd_per_burst); // If the forward data is valid and the length of cur tx is higher than length of atx, the remaining flag will be HIGH 
     assign tx_len_rem       = tx_len_spl - atx_wd_per_burst;
     assign tx_src_addr_rem  = tx_src_addr_spl + (atx_wd_per_burst & {DMA_LENGTH_W{~|(atx_src_burst^BURST_INCR)}}); // If (in burst increment mode) -> new_src_addr = old_src_addr + (number of word in the transaction)
-    assign tx_dst_addr_rem  = tx_src_addr_spl + (atx_wd_per_burst & {DMA_LENGTH_W{~|(atx_dst_burst^BURST_INCR)}}); // If (in burst increment mode) -> new_dst_addr = old_dst_addr + (number of word in the transaction)
+    assign tx_dst_addr_rem  = tx_dst_addr_spl + (atx_wd_per_burst & {DMA_LENGTH_W{~|(atx_dst_burst^BURST_INCR)}}); // If (in burst increment mode) -> new_dst_addr = old_dst_addr + (number of word in the transaction)
     // -- AXI Transaction generator
     assign arid             = atx_id;
     assign araddr           = tx_src_addr_spl;

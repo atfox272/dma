@@ -20,16 +20,16 @@
 
 
 // -- Delay
-`define RREADY_STALL_MAX    2
-`define ARREADY_STALL_MAX   2
-`define AWREADY_STALL_MAX   2
-`define WREADY_STALL_MAX    2
-`define BREADY_STALL_MAX    2
+`define RREADY_STALL_MAX    0
+`define ARREADY_STALL_MAX   0
+`define AWREADY_STALL_MAX   0
+`define WREADY_STALL_MAX    0
+`define BREADY_STALL_MAX    0
 
 `define END_TIME            50000
 
 parameter DMA_BASE_ADDR     = 32'h8000_0000;
-parameter DMA_CHN_NUM       = 1;    // Number of DMA channels
+parameter DMA_CHN_NUM       = 2;    // Number of DMA channels
 parameter DMA_LENGTH_W      = 16;   // Maximum size of 1 transfer is (2^16 * 256) 
 parameter DMA_DESC_DEPTH    = 4;    // The maximum number of descriptors in each channel
 parameter DMA_CHN_ARB_W     = 3;    // Channel arbitration weight's width
@@ -48,6 +48,7 @@ parameter ATX_RESP_W        = 2;
 parameter ATX_NUM_OSTD      = (DMA_CHN_NUM > 1) ? DMA_CHN_NUM : 2;  // Number of outstanding transactions in AXI bus (recmd: equal to the number of channel)
 parameter ATX_INTL_DEPTH    = 16; // Interleaving depth on the AXI data channel 
 
+/************ AXI Transaction ************/
 typedef struct {
     bit                     trans_type; // Write(1) / read(0) transaction
     bit [MST_ID_W-1:0]      axid;
@@ -56,15 +57,43 @@ typedef struct {
     bit [ATX_LEN_W-1:0]     axlen;
     bit [ATX_SIZE_W-1:0]    axsize;
 } atx_ax_info;
-
 typedef struct {
     bit [DST_ADDR_W-1:0]    wdata [`ATX_MAX_LENGTH];
+    bit [ATX_LEN_W-1:0]     wlen; // length = wlen + 1
 } atx_w_info;
-
 typedef struct {
     bit [MST_ID_W-1:0]      bid;
     bit [ATX_RESP_W-1:0]    bresp;
 } atx_b_info;
+
+/****************** DMA ******************/ 
+typedef struct {
+    bit                     dma_en;
+} dma_info;
+typedef struct {
+    bit [31:0]              chn_id;
+    bit                     chn_en;             // Channel Enable
+    bit                     chn_2d_xfer;        // 2D mode (flag)
+    bit                     chn_cyclic_xfer;    // Cyclic mode (flag)
+    bit                     chn_irq_msk_com;    // Interrupt completion mask
+    bit                     chn_irq_msk_qed;    // Interrupt queueing mask
+    bit [DMA_CHN_ARB_W-1:0] chn_arb_rate;       // Channel arbitration rate
+    bit [MST_ID_W-1:0]      atx_id;             // AXI Transaction ID
+    bit [1:0]               atx_src_burst;      // AXI Transaction Burst type 
+    bit [1:0]               atx_dst_burst;      // AXI Transaction Burst type 
+    bit [DMA_LENGTH_W:0]    atx_wd_per_burst;   // Word per burst 
+} channel_info;
+typedef struct {
+    bit [31:0]              chn_id;
+    bit [SRC_ADDR_W-1:0]    src_addr;
+    bit [DST_ADDR_W-1:0]    dst_addr;
+    bit [DMA_LENGTH_W-1:0]  xfer_xlen;
+    bit [DMA_LENGTH_W-1:0]  xfer_ylen;
+    bit [DMA_LENGTH_W-1:0]  src_stride;
+    bit [DMA_LENGTH_W-1:0]  dst_stride;
+} descriptor_info;
+
+
 
 module axi_dma_tb;
 
@@ -140,6 +169,16 @@ module axi_dma_tb;
     // Interrupt
     logic                           irq         [0:DMA_CHN_NUM-1];
     logic                           trap        [0:DMA_CHN_NUM-1];
+
+    // Sequence queue
+    mailbox #(atx_ax_info)  s_seq_aw_info;
+    mailbox #(atx_w_info)   s_seq_w_info;
+
+    // Driver queue
+    mailbox #(atx_ax_info)  m_drv_aw_info;
+    mailbox #(atx_b_info)   m_drv_b_info;
+    mailbox #(atx_ax_info)  m_drv_ar_info;
+
     axi_dma #(
         .DMA_BASE_ADDR  (DMA_BASE_ADDR),
         .DMA_CHN_NUM    (DMA_CHN_NUM),
@@ -211,7 +250,7 @@ module axi_dma_tb;
         #(`RST_DUR)         aresetn <= 1;
     end
     
-    initial begin
+    initial begin : CLK_GEN
         forever #(`DUT_CLK_PERIOD/2) aclk <= ~aclk;
     end
     
@@ -220,78 +259,102 @@ module axi_dma_tb;
         $finish;
     end
 
-    initial begin   : MASTER_DRIVER
+    initial begin : SOFTWARE_SEQUENCE
+        // SOFTWARE_SEQUENCE: uses to configure DMA via High-Level-Abtraction task
+        dma_info        dma_config;
+        channel_info    chn_config;
+        descriptor_info desc_config;
+        s_seq_aw_info   = new();
+        s_seq_w_info    = new();
+
+        // Configure DMA
+        dma_config.dma_en = 1'b1;
+        config_dma(dma_config);
+
+        // Configure Channel[0]
+        chn_config.chn_id           = 'd00;
+        chn_config.chn_en           = 1'b1; // Enable channel 0
+        chn_config.chn_2d_xfer      = 1'b1; // On
+        chn_config.chn_cyclic_xfer  = 1'b0; // Off
+        chn_config.chn_irq_msk_com  = 1'b1; // Enable
+        chn_config.chn_irq_msk_qed  = 1'b1; // Enable
+        chn_config.chn_arb_rate     = 'h03;
+        chn_config.atx_id           = 'h07;
+        chn_config.atx_src_burst    = 2'b01; // INCR burst 
+        chn_config.atx_dst_burst    = 2'b00; // FIX burst
+        chn_config.atx_wd_per_burst = 'd05;  // 6 AXI transfers per burst
+        config_chn(chn_config);
+        
+        // Configure Channel[1]
+        chn_config.chn_id           = 'd01;
+        chn_config.chn_en           = 1'b1; // Enable channel 1
+        chn_config.chn_2d_xfer      = 1'b1; // On
+        chn_config.chn_cyclic_xfer  = 1'b0; // ON
+        chn_config.chn_irq_msk_com  = 1'b1; // Enable
+        chn_config.chn_irq_msk_qed  = 1'b1; // Enable
+        chn_config.chn_arb_rate     = 'h05;
+        chn_config.atx_id           = 'h02;
+        chn_config.atx_src_burst    = 2'b01; // INCR burst 
+        chn_config.atx_dst_burst    = 2'b01; // INCR burst
+        chn_config.atx_wd_per_burst = 'd07;  // 8 AXI transfers per burst
+        config_chn(chn_config);
+
+        // Push 1 Descriptor to Channel[1]
+        desc_config.chn_id          = 'd01;
+        desc_config.src_addr        = 32'h5000_0000;
+        desc_config.dst_addr        = 32'h6000_0000;
+        desc_config.xfer_xlen       = 'd015; // Col Length = 16
+        desc_config.xfer_ylen       = 'd020; // Row Length = 16
+        desc_config.src_stride      = 'd10;
+        desc_config.dst_stride      = 'd10;
+        config_desc(desc_config);
+        
+        // Push 1 Descriptor to Channel[0]
+        desc_config.chn_id          = 'd00;
+        desc_config.src_addr        = 32'h1000_0000;
+        desc_config.dst_addr        = 32'h2000_0000;
+        desc_config.xfer_xlen       = 'd09; // Col Length = 10
+        desc_config.xfer_ylen       = 'd40; // Row Length = 41
+        desc_config.src_stride      = 'd20;
+        desc_config.dst_stride      = 'd20;
+        config_desc(desc_config);
+
+        /************************************************************************/
+        /****************** ADD YOUR CUSTOM CONFIGURATION HERE ******************/ 
+        /************************************************************************/
+    end
+
+    initial begin   : AXI_MASTER_DRIVER
         #(`RST_DLY_START + `RST_DUR + 1);
         fork 
-            begin   : AW_chn
-                // 1st: DMA en
-                s_aw_transfer(.s_awid(5'h01), .s_awaddr(32'h8000_0000), .s_awlen(8'd00));
-                // 2nd: Channel en
-                s_aw_transfer(.s_awid(5'h02), .s_awaddr(32'h8000_0001), .s_awlen(8'd00));
-                // 3rd: Channel flag -> 2D & Cyclic
-                s_aw_transfer(.s_awid(5'h03), .s_awaddr(32'h8000_0002), .s_awlen(8'd00));
-                // 4th: Channel interrupt mask
-                s_aw_transfer(.s_awid(5'h04), .s_awaddr(32'h8000_0003), .s_awlen(8'd00));
-                // 5th: ATX_ID
-                s_aw_transfer(.s_awid(5'h05), .s_awaddr(32'h8000_0005), .s_awlen(8'd00));
-                // 6th: ATX_SRC_BURST 
-                s_aw_transfer(.s_awid(5'h06), .s_awaddr(32'h8000_0006), .s_awlen(8'd00));
-                // 7th: ATX_DST_BURST 
-                s_aw_transfer(.s_awid(5'h07), .s_awaddr(32'h8000_0007), .s_awlen(8'd00));
-                // 8th: ATX_WD_PER_BURST 
-                s_aw_transfer(.s_awid(5'h08), .s_awaddr(32'h8000_0008), .s_awlen(8'd00));
-                // 9th: DESC - SRC_ADDR
-                s_aw_transfer(.s_awid(5'h09), .s_awaddr(32'h8000_0009), .s_awlen(8'd00));
-                // 10th: DESC - DST_ADDR
-                s_aw_transfer(.s_awid(5'h0A), .s_awaddr(32'h8000_000A), .s_awlen(8'd00));
-                // 11th: DESC - X_LEN
-                s_aw_transfer(.s_awid(5'h0B), .s_awaddr(32'h8000_000B), .s_awlen(8'd00));
-                // 12th: DESC - Y_LEN
-                s_aw_transfer(.s_awid(5'h0C), .s_awaddr(32'h8000_000C), .s_awlen(8'd00));
-                // 13th: DESC - SRC_STRIDE 
-                s_aw_transfer(.s_awid(5'h0D), .s_awaddr(32'h8000_000D), .s_awlen(8'd00));
-                // 14th: DESC - DST_STRIDE
-                s_aw_transfer(.s_awid(5'h0E), .s_awaddr(32'h8000_000E), .s_awlen(8'd00));
-                // 15th: DESC - SUBMIT
-                s_aw_transfer(.s_awid(5'h0F), .s_awaddr(32'h8000_1000), .s_awlen(8'd00));
-                aclk_cl;
-                s_awvalid_i <= 1'b0;
+            begin   : AW_DRV
+                atx_ax_info aw_temp;
+                forever begin
+                    if(s_seq_aw_info.try_get(aw_temp)) begin
+                        s_aw_transfer(.s_awid(aw_temp.axid), .s_awaddr(aw_temp.axaddr), .s_awlen(aw_temp.axlen));
+                    end
+                    else begin
+                        aclk_cl;    // Penalty 1 cycle
+                        s_awvalid_i <= 1'b0;
+                    end
+                end
             end
-            begin   : W_chn
-                // 1st: DMA en
-                s_w_transfer(.s_wdata(32'h01), .s_wlast(1'b1));
-                // 2nd: Channel en
-                s_w_transfer(.s_wdata(32'h01), .s_wlast(1'b1));
-                // 3rd: Channel flag -> 2D & Cyclic
-                s_w_transfer(.s_wdata(32'h01), .s_wlast(1'b1));
-                // 4th: Channel interrupt mask
-                s_w_transfer(.s_wdata(32'h03), .s_wlast(1'b1));
-                // 5th: ATX_ID
-                s_w_transfer(.s_wdata(32'h02), .s_wlast(1'b1));
-                // 6th: ATX_SRC_BURST 
-                s_w_transfer(.s_wdata(32'b01), .s_wlast(1'b1));
-                // 7th: ATX_DST_BURST 
-                s_w_transfer(.s_wdata(32'b01), .s_wlast(1'b1));
-                // 8th: ATX_WD_PER_BURST 
-                s_w_transfer(.s_wdata(32'd04), .s_wlast(1'b1));
-                // 9th: DESC - SRC_ADDR
-                s_w_transfer(.s_wdata(32'h1000_0000), .s_wlast(1'b1));
-                // 10th: DESC - DST_ADDR
-                s_w_transfer(.s_wdata(32'h2000_0000), .s_wlast(1'b1));
-                // 11th: DESC - X_LEN
-                s_w_transfer(.s_wdata(32'd04), .s_wlast(1'b1));
-                // 12th: DESC - Y_LEN
-                s_w_transfer(.s_wdata(32'd03), .s_wlast(1'b1));
-                // 13th: DESC - SRC_STRIDE 
-                s_w_transfer(.s_wdata(32'd05), .s_wlast(1'b1));
-                // 14th: DESC - DST_STRIDE
-                s_w_transfer(.s_wdata(32'd05), .s_wlast(1'b1));
-                // 15th: DESC - SUBMIT
-                s_w_transfer(.s_wdata(32'h01), .s_wlast(1'b1));
-                aclk_cl;
-                s_wvalid_i <= 1'b0;
+            begin   : W_DRV
+                atx_w_info w_temp;
+                int w_cnt;
+                forever begin
+                    if(s_seq_w_info.try_get(w_temp)) begin
+                        for(w_cnt = 0; w_cnt <= w_temp.wlen; w_cnt++) begin
+                            s_w_transfer(.s_wdata(w_temp.wdata[w_cnt]), .s_wlast(w_temp.wlen == w_cnt));
+                        end
+                    end
+                    else begin
+                        aclk_cl;    // Penalty 1 cycle
+                        s_wvalid_i <= 1'b0;
+                    end
+                end
             end
-            begin   : AR_chn
+            begin   : AR_DRV
                 // 1st: TRANSFER_ID
                 s_ar_transfer(.s_arid(5'h00), .s_araddr(32'h8000_2001), .s_arlen(8'd00));
                 // 2nd: TRANSFER_ID
@@ -299,14 +362,10 @@ module axi_dma_tb;
                 aclk_cl;
                 s_arvalid_i <= 1'b0;
             end
-            begin: R_chn
-                // Wrong request
-                // TODO: monitor the response data
-            end
         join_none
     end
 
-    initial begin : SLAVE_DRIVER
+    initial begin : AXI_SLAVE_DRIVER
         #(`RST_DLY_START + `RST_DUR + 1);
         slave_driver;
     end
@@ -404,10 +463,10 @@ module axi_dma_tb;
                 begin   : W_chn
                     while(1'b1) begin
                     wait(m_wready_i & m_wvalid_o); #0.1;  // W hanshaking
-                    $display("\n---------- DMA Master: W channel ----------");
-                    $display("WDATA:    0x%8h", m_wdata_o);
-                    $display("WLAST:    0x%8h", m_wlast_o);
-                    $display("--------------------------------------------");
+                    $display("\n\t\t\t\t\t\t---------- DMA Master: W channel ----------");
+                    $display("\t\t\t\t\t\tWDATA:    0x%8h", m_wdata_o);
+                    $display("\t\t\t\t\t\tWLAST:    0x%8h", m_wlast_o);
+                    $display("\t\t\t\t\t\t--------------------------------------------");
                     aclk_cl;
                     end
                 end
@@ -416,11 +475,11 @@ module axi_dma_tb;
                 begin   : B_chn
                     while(1'b1) begin
                     wait(m_bready_o & m_bvalid_i); #0.1;  // B hanshaking
-                    $display("\n---------- DMA Master: B channel ----------");
-                    $display("BID:      0x%8h", m_bid_i);
-                    $display("BRESP:    0x%8h", m_bresp_i);
-                    $display("--------------------------------------------");
-                    aclk_cl;
+                    $display("\n\t\t\t\t\t\t\t\t\t\t\t\t---------- DMA Master: B channel ----------");
+                    $display("\t\t\t\t\t\t\t\t\t\t\t\tBID:      0x%8h", m_bid_i);
+                    $display("\t\t\t\t\t\t\t\t\t\t\t\tBRESP:    0x%8h", m_bresp_i);
+                    $display("\t\t\t\t\t\t\t\t\t\t\t\t--------------------------------------------");
+                    aclk_cl; #0.5;
                     end
                 end
             `endif
@@ -441,11 +500,12 @@ module axi_dma_tb;
                 begin   : R_chn
                     while(1'b1) begin
                     wait(m_rready_o & m_rvalid_i); #0.1;  // R hanshaking
-                    $display("\n---------- DMA Master: R channel ----------");
-                    $display("RDATA:    0x%8h", m_rdata_i);
-                    $display("RRESP:    0x%8h", m_rresp_i);
-                    $display("RLAST:    0x%8h", m_rlast_i);
-                    $display("--------------------------------------------");
+                    $display("\n\t\t\t\t\t\t\t\t\t\t\t\t---------- DMA Master: R channel ----------");
+                    $display("\t\t\t\t\t\t\t\t\t\t\t\tRID:      0x%8h", m_rid_i);
+                    $display("\t\t\t\t\t\t\t\t\t\t\t\tRDATA:    0x%8h", m_rdata_i);
+                    $display("\t\t\t\t\t\t\t\t\t\t\t\tRRESP:    0x%8h", m_rresp_i);
+                    $display("\t\t\t\t\t\t\t\t\t\t\t\tRLAST:    0x%8h", m_rlast_i);
+                    $display("\t\t\t\t\t\t\t\t\t\t\t\t--------------------------------------------");
                     aclk_cl;
                     end
                 end
@@ -500,7 +560,6 @@ module axi_dma_tb;
         wait(s_arready_o == 1'b1); #0.1;
     endtask
     
-    /////////////////////////////////////////////////
     task automatic m_aw_receive(
         output  [MST_ID_W-1:0]      awid,
         output  [DST_ADDR_W-1:0]    awaddr,
@@ -566,12 +625,6 @@ module axi_dma_tb;
         #0.1;
         wait(m_rready_o == 1'b1); #0.1;
     endtask
-    /////////////////////////////////////////////////
-
-    mailbox #(atx_ax_info)  m_drv_aw_info;
-    mailbox #(atx_b_info)   m_drv_b_info;
-    mailbox #(atx_ax_info)  m_drv_ar_info;
-
     
     task automatic rand_stall_cycle(input int stall_max);
         int slave_stall_1cycle;
@@ -711,5 +764,171 @@ module axi_dma_tb;
                 end
             end 
         join_none
+    endtask
+
+    task automatic config_dma (dma_info info);
+        atx_ax_info aw_temp;
+        atx_w_info  w_temp;
+
+        // DMA Enable register
+        aw_temp.axaddr  = 32'h8000_0000;
+        aw_temp.axid    = 5'h00;
+        aw_temp.axburst = 2'b00;
+        aw_temp.axlen   = 'h00;
+        w_temp.wdata[0] = {30'h00, info.dma_en};
+        w_temp.wlen     = 'h00;
+
+        s_seq_aw_info.put(aw_temp);
+        s_seq_w_info.put(w_temp);
+    endtask
+
+    task automatic config_chn (channel_info info);
+        atx_ax_info aw_temp;
+        atx_w_info  w_temp;
+
+        // Channel Enable register
+        aw_temp.axaddr  = 32'h8000_0001 + (info.chn_id<<4);
+        aw_temp.axid    = 5'h01;
+        aw_temp.axburst = 2'b00;
+        aw_temp.axlen   = 'h00;
+        w_temp.wdata[0] = {30'h00, info.chn_en};
+        w_temp.wlen     = 'h00;
+        s_seq_aw_info.put(aw_temp);
+        s_seq_w_info.put(w_temp);
+        
+        // Channel Flag register
+        aw_temp.axaddr  = 32'h8000_0002 + (info.chn_id<<4);
+        aw_temp.axid    = 5'h02;
+        aw_temp.axburst = 2'b00;
+        aw_temp.axlen   = 'h00;
+        w_temp.wdata[0] = {29'h00, info.chn_cyclic_xfer, info.chn_2d_xfer};
+        w_temp.wlen     = 'h00;
+        s_seq_aw_info.put(aw_temp);
+        s_seq_w_info.put(w_temp);
+        
+        // Channel Interrupt Mask register
+        aw_temp.axaddr  = 32'h8000_0003 + (info.chn_id<<4);
+        aw_temp.axid    = 5'h03;
+        aw_temp.axburst = 2'b00;
+        aw_temp.axlen   = 'h00;
+        w_temp.wdata[0] = {29'h00, info.chn_irq_msk_qed, info.chn_irq_msk_com};
+        w_temp.wlen     = 'h00;
+        s_seq_aw_info.put(aw_temp);
+        s_seq_w_info.put(w_temp);
+        
+        // Channel AXI ID register
+        aw_temp.axaddr  = 32'h8000_0005 + (info.chn_id<<4);
+        aw_temp.axid    = 5'h04;
+        aw_temp.axburst = 2'b00;
+        aw_temp.axlen   = 'h00;
+        w_temp.wdata[0] = info.atx_id;
+        w_temp.wlen     = 'h00;
+        s_seq_aw_info.put(aw_temp);
+        s_seq_w_info.put(w_temp);
+        
+        // Channel AXI Source Burst register
+        aw_temp.axaddr  = 32'h8000_0006 + (info.chn_id<<4);
+        aw_temp.axid    = 5'h05;
+        aw_temp.axburst = 2'b00;
+        aw_temp.axlen   = 'h00;
+        w_temp.wdata[0] = info.atx_src_burst;
+        w_temp.wlen     = 'h00;
+        s_seq_aw_info.put(aw_temp);
+        s_seq_w_info.put(w_temp);
+
+        // Channel AXI Destination Burst register
+        aw_temp.axaddr  = 32'h8000_0007 + (info.chn_id<<4);
+        aw_temp.axid    = 5'h06;
+        aw_temp.axburst = 2'b00;
+        aw_temp.axlen   = 'h00;
+        w_temp.wdata[0] = info.atx_dst_burst;
+        w_temp.wlen     = 'h00;
+        s_seq_aw_info.put(aw_temp);
+        s_seq_w_info.put(w_temp);
+
+        // Channel AXI Words Per Burst register
+        aw_temp.axaddr  = 32'h8000_0008 + (info.chn_id<<4);
+        aw_temp.axid    = 5'h07;
+        aw_temp.axburst = 2'b00;
+        aw_temp.axlen   = 'h00;
+        w_temp.wdata[0] = info.atx_wd_per_burst;
+        w_temp.wlen     = 'h00;
+        s_seq_aw_info.put(aw_temp);
+        s_seq_w_info.put(w_temp);
+    endtask
+
+    task automatic config_desc (descriptor_info info);
+        atx_ax_info aw_temp;
+        atx_w_info  w_temp;
+
+        // Descriptor - Source Address register
+        aw_temp.axaddr  = 32'h8000_0009 + (info.chn_id<<4);
+        aw_temp.axid    = 5'h08;
+        aw_temp.axburst = 2'b00;
+        aw_temp.axlen   = 'h00;
+        w_temp.wdata[0] = info.src_addr;
+        w_temp.wlen     = 'h00;
+        s_seq_aw_info.put(aw_temp);
+        s_seq_w_info.put(w_temp);
+
+        // Descriptor - Destination Address register
+        aw_temp.axaddr  = 32'h8000_000A + (info.chn_id<<4);
+        aw_temp.axid    = 5'h09;
+        aw_temp.axburst = 2'b00;
+        aw_temp.axlen   = 'h00;
+        w_temp.wdata[0] = info.dst_addr;
+        w_temp.wlen     = 'h00;
+        s_seq_aw_info.put(aw_temp);
+        s_seq_w_info.put(w_temp);
+
+        // Descriptor - Transfer X Length register
+        aw_temp.axaddr  = 32'h8000_000B + (info.chn_id<<4);
+        aw_temp.axid    = 5'h0A;
+        aw_temp.axburst = 2'b00;
+        aw_temp.axlen   = 'h00;
+        w_temp.wdata[0] = info.xfer_xlen;
+        w_temp.wlen     = 'h00;
+        s_seq_aw_info.put(aw_temp);
+        s_seq_w_info.put(w_temp);
+
+        // Descriptor - Transfer Y Length register
+        aw_temp.axaddr  = 32'h8000_000C + (info.chn_id<<4);
+        aw_temp.axid    = 5'h0B;
+        aw_temp.axburst = 2'b00;
+        aw_temp.axlen   = 'h00;
+        w_temp.wdata[0] = info.xfer_ylen;
+        w_temp.wlen     = 'h00;
+        s_seq_aw_info.put(aw_temp);
+        s_seq_w_info.put(w_temp);
+
+        // Descriptor - Source Stride register
+        aw_temp.axaddr  = 32'h8000_000D + (info.chn_id<<4);
+        aw_temp.axid    = 5'h0C;
+        aw_temp.axburst = 2'b00;
+        aw_temp.axlen   = 'h00;
+        w_temp.wdata[0] = info.src_stride;
+        w_temp.wlen     = 'h00;
+        s_seq_aw_info.put(aw_temp);
+        s_seq_w_info.put(w_temp);
+
+        // Descriptor - Destination Stride register
+        aw_temp.axaddr  = 32'h8000_000E + (info.chn_id<<4);
+        aw_temp.axid    = 5'h0D;
+        aw_temp.axburst = 2'b00;
+        aw_temp.axlen   = 'h00;
+        w_temp.wdata[0] = info.dst_stride;
+        w_temp.wlen     = 'h00;
+        s_seq_aw_info.put(aw_temp);
+        s_seq_w_info.put(w_temp);
+
+        // Descriptor - Submit register
+        aw_temp.axaddr  = 32'h8000_1000 + (info.chn_id<<4);
+        aw_temp.axid    = 5'h0E;
+        aw_temp.axburst = 2'b00;
+        aw_temp.axlen   = 'h00;
+        w_temp.wdata[0] = 32'h01;
+        w_temp.wlen     = 'h00;
+        s_seq_aw_info.put(aw_temp);
+        s_seq_w_info.put(w_temp);
     endtask
 endmodule
