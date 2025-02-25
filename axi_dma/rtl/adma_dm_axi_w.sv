@@ -71,7 +71,7 @@ module adma_dm_axi_w #(
     );
     // Combinational logic
     assign m_wdata  = atx_wdata;
-    assign m_wlast  = ~(wdata_cnt^wdata_len);
+    assign m_wlast  = ~|(wdata_cnt^wdata_len);
     assign db_hsk   = atx_wdata_vld & atx_wdata_rdy;
     assign m_wvalid = atx_wdata_vld & atx_wdata_rdy;
     assign atx_wdata_rdy = m_wready & wdata_len_vld;

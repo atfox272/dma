@@ -13,10 +13,10 @@
 // `define MONITOR_DMA_SLV_AR
 // `define MONITOR_DMA_SLV_R
 `define MONITOR_DMA_MST_AW
-// `define MONITOR_DMA_MST_W
+`define MONITOR_DMA_MST_W
 // `define MONITOR_DMA_MST_B
 `define MONITOR_DMA_MST_AR
-// `define MONITOR_DMA_MST_R
+`define MONITOR_DMA_MST_R
 
 
 // -- Delay
