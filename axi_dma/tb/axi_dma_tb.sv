@@ -1,23 +1,32 @@
 `timescale 1ns/1ps
 
-`define DUT_CLK_PERIOD  2
-`define RST_DLY_START   3
-`define RST_DUR         9
+`define DUT_CLK_PERIOD      2
+`define RST_DLY_START       3
+`define RST_DUR             9
 
-`define ATX_MAX_LENGTH  128
+`define ATX_MAX_LENGTH      128
 
-`define END_TIME        50000
-
-// Slave device physical timing simulation
-`define SLV_DVC_LATENCY 2 // Time unit
+// Monitor mode
+// `define MONITOR_DMA_SLV_AW
+// `define MONITOR_DMA_SLV_W
+// `define MONITOR_DMA_SLV_B
+// `define MONITOR_DMA_SLV_AR
+// `define MONITOR_DMA_SLV_R
+`define MONITOR_DMA_MST_AW
+// `define MONITOR_DMA_MST_W
+// `define MONITOR_DMA_MST_B
+`define MONITOR_DMA_MST_AR
+// `define MONITOR_DMA_MST_R
 
 
 // -- Delay
-parameter                       RREADY_STALL_MAX        = 2;
-parameter                       ARREADY_STALL_MAX       = 2;
-parameter                       AWREADY_STALL_MAX       = 2;
-parameter                       WREADY_STALL_MAX        = 2;
-parameter                       BREADY_STALL_MAX        = 2;
+`define RREADY_STALL_MAX    2
+`define ARREADY_STALL_MAX   2
+`define AWREADY_STALL_MAX   2
+`define WREADY_STALL_MAX    2
+`define BREADY_STALL_MAX    2
+
+`define END_TIME            50000
 
 parameter DMA_BASE_ADDR     = 32'h8000_0000;
 parameter DMA_CHN_NUM       = 1;    // Number of DMA channels
@@ -302,67 +311,149 @@ module axi_dma_tb;
         slave_driver;
     end
 
-    /*          AXI4 monitor            */
-    initial begin   : AXI4_MONITOR
+    /*          DMA slave monitor            */
+    initial begin   : DMA_SLV_MONITOR
         #(`RST_DLY_START + `RST_DUR + 1);
         fork 
-            // begin   : AW_chn
-            //     while(1'b1) begin
-            //         wait(s_awready_o & s_awvalid_i); #0.1;  // AW hanshaking
-            //         $display("\n---------- AW channel ----------");
-            //         $display("AWID:     0x%8h", s_awid_i);
-            //         $display("AWADDR:   0x%8h", s_awaddr_i);
-            //         $display("AWLEN:    0x%8h", s_awlen_i);
-            //         $display("-------------------------------");
-            //         aclk_cl;
-            //     end
-            // end
-            // begin   : W_chn
-            //     while(1'b1) begin
-            //         wait(s_wready_o & s_wvalid_i); #0.1;  // W hanshaking
-            //         $display("\n---------- W channel ----------");
-            //         $display("WDATA:    0x%8h", s_wdata_i);
-            //         $display("WLAST:    0x%8h", s_wlast_i);
-            //         $display("-------------------------------");
-            //         aclk_cl;
-            //     end
-            // end
-            begin   : B_chn
-                while(1'b1) begin
-                    wait(s_bready_i & s_bvalid_o); #0.1;  // B hanshaking
-                    $display("\n---------- B channel ----------");
-                    $display("BID:      0x%8h", s_bid_o);
-                    $display("BRESP:    0x%8h", s_bresp_o);
-                    $display("-------------------------------");
-                    aclk_cl;
+            `ifdef MONITOR_DMA_SLV_AW
+                begin   : AW_chn
+                    while(1'b1) begin
+                        wait(s_awready_o & s_awvalid_i); #0.1;  // AW hanshaking
+                        $display("\n---------- DMA Slave: AW channel ----------");
+                        $display("AWID:     0x%8h", s_awid_i);
+                        $display("AWADDR:   0x%8h", s_awaddr_i);
+                        $display("AWLEN:    0x%8h", s_awlen_i);
+                        $display("--------------------------------------------");
+                        aclk_cl;
+                    end
                 end
-            end
-            // begin   : AR_chn
-            //     while(1'b1) begin
-            //         wait(s_arready_o & s_arvalid_i); #0.1;  // AR hanshaking
-            //         $display("\n---------- AR channel ----------");
-            //         $display("ARID:     0x%8h", s_arid_i);
-            //         $display("ARADDR:   0x%8h", s_araddr_i);
-            //         $display("ARLEN:    0x%8h", s_arlen_i);
-            //         $display("-------------------------------");
-            //         aclk_cl;
-            //     end
-
-            // end
-            begin   : R_chn
-                while(1'b1) begin
-                    wait(s_rready_i & s_rvalid_o); #0.1;  // R hanshaking
-                    $display("\n---------- R channel ----------");
-                    $display("RDATA:    0x%8h", s_rdata_o);
-                    $display("RRESP:    0x%8h", s_rresp_o);
-                    $display("RLAST:    0x%8h", s_rlast_o);
-                    $display("-------------------------------");
-                    aclk_cl;
+            `endif
+            `ifdef MONITOR_DMA_SLV_W
+                begin   : W_chn
+                    while(1'b1) begin
+                        wait(s_wready_o & s_wvalid_i); #0.1;  // W hanshaking
+                        $display("\n---------- DMA Slave: W channel ----------");
+                        $display("WDATA:    0x%8h", s_wdata_i);
+                        $display("WLAST:    0x%8h", s_wlast_i);
+                        $display("--------------------------------------------");
+                        aclk_cl;
+                    end
                 end
-            end
+            `endif
+            `ifdef MONITOR_DMA_SLV_B
+                begin   : B_chn
+                    while(1'b1) begin
+                        wait(s_bready_i & s_bvalid_o); #0.1;  // B hanshaking
+                        $display("\n---------- DMA Slave: B channel ----------");
+                        $display("BID:      0x%8h", s_bid_o);
+                        $display("BRESP:    0x%8h", s_bresp_o);
+                        $display("--------------------------------------------");
+                        aclk_cl;
+                    end
+                end
+            `endif
+            `ifdef MONITOR_DMA_SLV_AR
+                begin   : AR_chn
+                    while(1'b1) begin
+                        wait(s_arready_o & s_arvalid_i); #0.1;  // AR hanshaking
+                        $display("\n---------- DMA Slave: AR channel ----------");
+                        $display("ARID:     0x%8h", s_arid_i);
+                        $display("ARADDR:   0x%8h", s_araddr_i);
+                        $display("ARLEN:    0x%8h", s_arlen_i);
+                        $display("--------------------------------------------");
+                        aclk_cl;
+                    end
+                end
+            `endif
+            `ifdef MONITOR_DMA_SLV_R
+                begin   : R_chn
+                    while(1'b1) begin
+                        wait(s_rready_i & s_rvalid_o); #0.1;  // R hanshaking
+                        $display("\n---------- DMA Slave: R channel ----------");
+                        $display("RDATA:    0x%8h", s_rdata_o);
+                        $display("RRESP:    0x%8h", s_rresp_o);
+                        $display("RLAST:    0x%8h", s_rlast_o);
+                        $display("--------------------------------------------");
+                        aclk_cl;
+                    end
+                end
+            `endif
+            begin end
         join_none
     end
-    /*          AXI4 monitor            */
+    /*          DMA slave monitor            */
+
+    /*          DMA master monitor            */
+    initial begin   : DMA_MST_MONITOR
+        #(`RST_DLY_START + `RST_DUR + 1);
+        fork 
+            `ifdef MONITOR_DMA_MST_AW
+                begin   : AW_chn
+                    while(1'b1) begin
+                    wait(m_awready_i & m_awvalid_o); #0.1;  // AW hanshaking
+                    $display("\n---------- DMA Master: AW channel ----------");
+                    $display("AWID:     0x%8h", m_awid_o);
+                    $display("AWADDR:   0x%8h", m_awaddr_o);
+                    $display("AWLEN:    0x%8h", m_awlen_o);
+                    $display("--------------------------------------------");
+                    aclk_cl;
+                    end
+                end
+            `endif
+            `ifdef MONITOR_DMA_MST_W
+                begin   : W_chn
+                    while(1'b1) begin
+                    wait(m_wready_i & m_wvalid_o); #0.1;  // W hanshaking
+                    $display("\n---------- DMA Master: W channel ----------");
+                    $display("WDATA:    0x%8h", m_wdata_o);
+                    $display("WLAST:    0x%8h", m_wlast_o);
+                    $display("--------------------------------------------");
+                    aclk_cl;
+                    end
+                end
+            `endif
+            `ifdef MONITOR_DMA_MST_B
+                begin   : B_chn
+                    while(1'b1) begin
+                    wait(m_bready_o & m_bvalid_i); #0.1;  // B hanshaking
+                    $display("\n---------- DMA Master: B channel ----------");
+                    $display("BID:      0x%8h", m_bid_i);
+                    $display("BRESP:    0x%8h", m_bresp_i);
+                    $display("--------------------------------------------");
+                    aclk_cl;
+                    end
+                end
+            `endif
+            `ifdef MONITOR_DMA_MST_AR
+                begin   : AR_chn
+                    while(1'b1) begin
+                    wait(m_arready_i & m_arvalid_o); #0.1;  // AR hanshaking
+                    $display("\n---------- DMA Master: AR channel ----------");
+                    $display("ARID:     0x%8h", m_arid_o);
+                    $display("ARADDR:   0x%8h", m_araddr_o);
+                    $display("ARLEN:    0x%8h", m_arlen_o);
+                    $display("--------------------------------------------");
+                    aclk_cl;
+                    end
+                end
+            `endif
+            `ifdef MONITOR_DMA_MST_R
+                begin   : R_chn
+                    while(1'b1) begin
+                    wait(m_rready_o & m_rvalid_i); #0.1;  // R hanshaking
+                    $display("\n---------- DMA Master: R channel ----------");
+                    $display("RDATA:    0x%8h", m_rdata_i);
+                    $display("RRESP:    0x%8h", m_rresp_i);
+                    $display("RLAST:    0x%8h", m_rlast_i);
+                    $display("--------------------------------------------");
+                    aclk_cl;
+                    end
+                end
+            `endif
+            begin end
+        join_none
+    end
+    /*          DMA master monitor            */
 
    /*           DeepCode                */
     task automatic aclk_cl;
@@ -512,7 +603,7 @@ module axi_dma_tb;
                     aclk_cl;
                     // Stall random
                     m_arready_i = 1'b0;
-                    rand_stall_cycle(AWREADY_STALL_MAX);
+                    rand_stall_cycle(`AWREADY_STALL_MAX);
                 end
             end
             begin   : W_CHN
@@ -531,7 +622,7 @@ module axi_dma_tb;
                             );
                             // WDATA predictor
                             if(w_temp.wdata[i] == i) begin
-                                // Pass
+                                // $display("[INFO]: Destination - Sample WDATA[%1d] = %h and WLAST = %1b)", i, w_temp.wdata[i], i, wlast_temp);
                             end
                             else begin
                                 $display("[FAIL]: Destination - Sample WDATA[%1d] = %h and Golden WDATA = %h)", i, w_temp.wdata[i], i);
@@ -549,7 +640,7 @@ module axi_dma_tb;
                             aclk_cl;
                             // Stall random
                             m_wready_i = 1'b0;
-                            rand_stall_cycle(WREADY_STALL_MAX);
+                            rand_stall_cycle(`WREADY_STALL_MAX);
                         end
                         // Generate B transfer
                         b_temp.bid      = aw_temp.axid;
@@ -596,7 +687,7 @@ module axi_dma_tb;
                     m_drv_ar_info.put(ar_temp);
                     // Stall random
                     m_arready_i = 1'b0;
-                    rand_stall_cycle(ARREADY_STALL_MAX);
+                    rand_stall_cycle(`ARREADY_STALL_MAX);
                 end
             end
             begin   : R_CHN

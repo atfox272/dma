@@ -82,7 +82,7 @@ module adma_as_atx_fetch #(
     // -- AXI Transaction generator
     assign arid             = atx_id;
     assign araddr           = tx_src_addr_spl;
-    assign arlen            = tx_rem_flg ? atx_wd_per_burst : (atx_wd_per_burst - tx_len_spl); // If the length of tx is greater than (word_per_burst), -> get word_per_burst. Else get remainder
+    assign arlen            = tx_rem_flg ? atx_wd_per_burst : tx_len_spl; // If the length of tx is greater than (word_per_burst), -> get word_per_burst. Else get TX length
     assign arburst          = atx_src_burst;
     assign awid             = atx_id;
     assign awaddr           = tx_dst_addr_spl;
