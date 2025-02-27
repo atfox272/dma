@@ -44,8 +44,12 @@ module adma_cm_chn_unit
     // Interrupt request control
     output                      irq_com
 );
+    // Internal variable 
+    genvar xfer_idx;
+
     // Internal signals
     wire [DMA_DESC_DEPTH-1:0]   xfer_done_set;
+    wire [DMA_DESC_DEPTH-1:0]   xfer_done_rise;
     
     // Module instantiation
     // -- Transaction fetch
@@ -94,13 +98,19 @@ module adma_cm_chn_unit
         .chn_xfer_cyclic        (chn_xfer_cyclic)
     );
     // Completion interrupt request generator
+generate
+for(xfer_idx = 0; xfer_idx < DMA_DESC_DEPTH; xfer_idx++) begin : COMP_IRQ_GEN
     edgedet #(
         .RISING_EDGE            (1) // RISING edge
     ) cig (
         .clk                    (clk),
         .rst_n                  (rst_n),
-        .i                      (|xfer_done),   // One of 4 transfers in the channel has been done
+        .i                      (xfer_done[xfer_idx]),   // One of 4 transfers in the channel has been done
         .en                     (chn_irq_msk_irq_com),
-        .o                      (irq_com)
+        .o                      (xfer_done_rise[xfer_idx])
     );
+end
+endgenerate
+    // Interrupt request generate
+    assign irq_com = |xfer_done_rise;   // One of all transfer is done -> Interrupt request
 endmodule

@@ -299,7 +299,7 @@ module axi_dma_tb;
         chn_config.atx_wd_per_burst = 'd07;  // 8 AXI transfers per burst
         config_chn(chn_config);
         
-        // Push 1 Descriptor to Channel[0]
+        // Push 1 Descriptor[0] to Channel[0]
         desc_config.chn_id          = 'd00;
         desc_config.src_addr        = 32'h1000_0000;
         desc_config.dst_addr        = 32'h2000_0000;
@@ -309,7 +309,7 @@ module axi_dma_tb;
         desc_config.dst_stride      = 'h1000;
         config_desc(desc_config);
 
-        // Push 1 Descriptor to Channel[1]
+        // Push 1 Descriptor[0] to Channel[1]
         desc_config.chn_id          = 'd01;
         desc_config.src_addr        = 32'h5000_0000;
         desc_config.dst_addr        = 32'h6000_0000;
@@ -319,7 +319,7 @@ module axi_dma_tb;
         desc_config.dst_stride      = 'h1000;
         config_desc(desc_config);
 
-        // Push 1 Descriptor to Channel[0]
+        // Push 1 Descriptor[1] to Channel[0]
         desc_config.chn_id          = 'd00;
         desc_config.src_addr        = 32'h3000_0000;
         desc_config.dst_addr        = 32'h4000_0000;
@@ -329,7 +329,7 @@ module axi_dma_tb;
         desc_config.dst_stride      = 'h1000;
         config_desc(desc_config);
 
-        // Push 1 Descriptor to Channel[1]
+        // Push 1 Descriptor[1] to Channel[1]
         desc_config.chn_id          = 'd01;
         desc_config.src_addr        = 32'h7000_0000;
         desc_config.dst_addr        = 32'h8000_0000;
@@ -339,7 +339,7 @@ module axi_dma_tb;
         desc_config.dst_stride      = 'h1000;
         config_desc(desc_config);
         
-        // Push 1 Descriptor to Channel[0]
+        // Push 1 Descriptor[2] to Channel[0]
         desc_config.chn_id          = 'd00;
         desc_config.src_addr        = 32'h4100_0000;
         desc_config.dst_addr        = 32'h3100_0000;
@@ -349,7 +349,7 @@ module axi_dma_tb;
         desc_config.dst_stride      = 'h1000;
         config_desc(desc_config);
         
-        // Push 1 Descriptor to Channel[0]
+        // Push 1 Descriptor[3] to Channel[0]
         desc_config.chn_id          = 'd00;
         desc_config.src_addr        = 32'h4100_0000;
         desc_config.dst_addr        = 32'h5100_0000;
