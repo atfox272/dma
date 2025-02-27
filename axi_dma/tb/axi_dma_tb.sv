@@ -298,25 +298,25 @@ module axi_dma_tb;
         chn_config.atx_dst_burst    = 2'b01; // INCR burst
         chn_config.atx_wd_per_burst = 'd07;  // 8 AXI transfers per burst
         config_chn(chn_config);
-
-        // Push 1 Descriptor to Channel[1]
-        desc_config.chn_id          = 'd01;
-        desc_config.src_addr        = 32'h5000_0000;
-        desc_config.dst_addr        = 32'h6000_0000;
-        desc_config.xfer_xlen       = 'd015; // Col Length = 16
-        desc_config.xfer_ylen       = 'd020; // Row Length = 16
-        desc_config.src_stride      = 'd10;
-        desc_config.dst_stride      = 'd10;
-        config_desc(desc_config);
         
         // Push 1 Descriptor to Channel[0]
         desc_config.chn_id          = 'd00;
         desc_config.src_addr        = 32'h1000_0000;
         desc_config.dst_addr        = 32'h2000_0000;
-        desc_config.xfer_xlen       = 'd09; // Col Length = 10
-        desc_config.xfer_ylen       = 'd40; // Row Length = 41
-        desc_config.src_stride      = 'd20;
-        desc_config.dst_stride      = 'd20;
+        desc_config.xfer_xlen       = 'd08; // Col Length = 9
+        desc_config.xfer_ylen       = 'd03; // Row Length = 4
+        desc_config.src_stride      = 'h1000;
+        desc_config.dst_stride      = 'h1000;
+        config_desc(desc_config);
+
+        // Push 1 Descriptor to Channel[1]
+        desc_config.chn_id          = 'd01;
+        desc_config.src_addr        = 32'h5000_0000;
+        desc_config.dst_addr        = 32'h6000_0000;
+        desc_config.xfer_xlen       = 'd15; // Col Length = 16
+        desc_config.xfer_ylen       = 'd04; // Row Length = 5
+        desc_config.src_stride      = 'h1000;
+        desc_config.dst_stride      = 'h1000;
         config_desc(desc_config);
 
         /************************************************************************/
