@@ -94,6 +94,6 @@ module adma_as_atx_fetch #(
     assign tx_spl_rdy       = atx_rdy;
 
     assign atx_start        = tx_spl_vld & tx_spl_rdy;
-    assign atx_start_last   = ~|tx_len_rem;  // The last AXI Transaction of a DMA Transaction -> No more remaining transaction
+    assign atx_start_last   = ~tx_rem_flg;  // No more remaining transaction
     
 endmodule
