@@ -4,7 +4,9 @@
 `define RST_DLY_START       3
 `define RST_DUR             9
 
-`define ATX_MAX_LENGTH      128
+// Testbench mode
+// `define CUSTOM_MODE
+`define IMG_STREAM_MODE
 
 // Monitor mode
 // `define MONITOR_DMA_SLV_AW
@@ -12,14 +14,14 @@
 // `define MONITOR_DMA_SLV_B
 // `define MONITOR_DMA_SLV_AR
 // `define MONITOR_DMA_SLV_R
-`define MONITOR_DMA_MST_AW
-`define MONITOR_DMA_MST_W
+// `define MONITOR_DMA_MST_AW
+// `define MONITOR_DMA_MST_W
 // `define MONITOR_DMA_MST_B
-`define MONITOR_DMA_MST_AR
-`define MONITOR_DMA_MST_R
+// `define MONITOR_DMA_MST_AR
+// `define MONITOR_DMA_MST_R
 
-
-// -- Delay
+// -- AXI Transaction
+`define ATX_MAX_LENGTH      128
 `define RREADY_STALL_MAX    0
 `define ARREADY_STALL_MAX   0
 `define AWREADY_STALL_MAX   0
@@ -48,6 +50,34 @@ parameter ATX_RESP_W        = 2;
 parameter ATX_NUM_OSTD      = (DMA_CHN_NUM > 1) ? DMA_CHN_NUM : 2;  // Number of outstanding transactions in AXI bus (recmd: equal to the number of channel)
 parameter ATX_INTL_DEPTH    = 16; // Interleaving depth on the AXI data channel 
 
+// Source image 
+parameter SRC_PXL_W         = 16;   // pixel format RGB565
+parameter SRC_IMG_W         = 640;  // width
+parameter SRC_IMG_H         = 480;  // height
+parameter SRC_MEM_SIZE      = (SRC_IMG_W /(ATX_SRC_DATA_W/SRC_PXL_W)) * SRC_IMG_H;  // Image size 640x480
+parameter SRC_BASE_ADDR     = 32'h0000_0000;
+// Destination[0] image
+parameter DST_0_IMG_W       = 320;  // width
+parameter DST_0_IMG_H       = 240;  // depth
+parameter DST_0_PXL_W       = 16;   // pixel format RGB565
+parameter DST_0_MEM_SIZE    = (DST_0_IMG_W /(ATX_DST_DATA_W/DST_0_PXL_W)) * DST_0_IMG_H;  // Image size 320x240
+parameter DST_0_BASE_ADDR   = 32'h8000_0000;
+parameter DST_0_IMG_START_X = 200;
+parameter DST_0_IMG_START_Y = 100;
+parameter DST_0_IMG_SHIFT   = (DST_0_IMG_START_X /(ATX_DST_DATA_W/DST_0_PXL_W)) + (DST_0_IMG_START_Y * (SRC_IMG_W /(ATX_SRC_DATA_W/SRC_PXL_W)));
+// Destination[1] image
+parameter DST_1_PXL_W       = 16;   // pixel format RGB565
+parameter DST_1_IMG_W       = 320;  // width
+parameter DST_1_IMG_H       = 240;  // depth
+parameter DST_1_MEM_SIZE    = (DST_1_IMG_W /(ATX_DST_DATA_W/DST_1_PXL_W)) * DST_1_IMG_H;  // Image size 320x240
+parameter DST_1_BASE_ADDR   = 32'hC000_0000;
+parameter DST_1_IMG_START_X = 100;
+parameter DST_1_IMG_START_Y = 200;
+parameter DST_1_IMG_SHIFT   = (DST_1_IMG_START_X /(ATX_DST_DATA_W/DST_1_PXL_W)) + (DST_1_IMG_START_Y * (SRC_IMG_W /(ATX_SRC_DATA_W/SRC_PXL_W)));
+
+
+
+
 /************ AXI Transaction ************/
 typedef struct {
     bit                     trans_type; // Write(1) / read(0) transaction
@@ -58,7 +88,7 @@ typedef struct {
     bit [ATX_SIZE_W-1:0]    axsize;
 } atx_ax_info;
 typedef struct {
-    bit [DST_ADDR_W-1:0]    wdata [`ATX_MAX_LENGTH];
+    bit [ATX_DST_DATA_W-1:0]wdata [`ATX_MAX_LENGTH];
     bit [ATX_LEN_W-1:0]     wlen; // length = wlen + 1
 } atx_w_info;
 typedef struct {
@@ -170,6 +200,13 @@ module axi_dma_tb;
     logic                           irq         [0:DMA_CHN_NUM-1];
     logic                           trap        [0:DMA_CHN_NUM-1];
 
+    // Source Memory
+    logic [ATX_SRC_DATA_W-1:0]      src_mem     [0:SRC_MEM_SIZE-1];
+    // Destination Memory 0
+    logic [ATX_DST_DATA_W-1:0]      dst_mem_0   [0:DST_0_MEM_SIZE-1];
+    // Destination Memory 1
+    logic [ATX_DST_DATA_W-1:0]      dst_mem_1   [0:DST_1_MEM_SIZE-1];
+
     // Sequence queue
     mailbox #(atx_ax_info)  s_seq_aw_info;
     mailbox #(atx_w_info)   s_seq_w_info;
@@ -178,6 +215,7 @@ module axi_dma_tb;
     mailbox #(atx_ax_info)  m_drv_aw_info;
     mailbox #(atx_b_info)   m_drv_b_info;
     mailbox #(atx_ax_info)  m_drv_ar_info;
+
 
     axi_dma #(
         .DMA_BASE_ADDR  (DMA_BASE_ADDR),
@@ -267,6 +305,10 @@ module axi_dma_tb;
         s_seq_aw_info   = new();
         s_seq_w_info    = new();
 
+`ifdef CUSTOM_MODE
+        /************************************************************************/
+        /****************** ADD YOUR CUSTOM DMA CONTROL HERE ********************/ 
+        /************************************************************************/
         // Configure DMA
         dma_config.dma_en = 1'b1;
         config_dma(dma_config);
@@ -275,7 +317,7 @@ module axi_dma_tb;
         chn_config.chn_id           = 'd00;
         chn_config.chn_en           = 1'b1; // Enable channel 0
         chn_config.chn_2d_xfer      = 1'b1; // On
-        chn_config.chn_cyclic_xfer  = 1'b0; // Off
+        chn_config.chn_cyclic_xfer  = 1'b1; // Off
         chn_config.chn_irq_msk_com  = 1'b1; // Enable
         chn_config.chn_irq_msk_qed  = 1'b1; // Enable
         chn_config.chn_arb_rate     = 'h03;
@@ -328,40 +370,59 @@ module axi_dma_tb;
         desc_config.src_stride      = 'h1000;
         desc_config.dst_stride      = 'h1000;
         config_desc(desc_config);
+`elsif IMG_STREAM_MODE
+        // Configure DMA
+        dma_config.dma_en = 1'b1;
+        config_dma(dma_config);
 
-        // Push 1 Descriptor[1] to Channel[1]
+        // Configure Channel[0]
+        chn_config.chn_id           = 'd00;
+        chn_config.chn_en           = 1'b1; // Enable channel 0
+        chn_config.chn_2d_xfer      = 1'b1; // On
+        chn_config.chn_cyclic_xfer  = 1'b0; // Off
+        chn_config.chn_irq_msk_com  = 1'b1; // Enable
+        chn_config.chn_irq_msk_qed  = 1'b0; // Disable
+        chn_config.chn_arb_rate     = 'h03;
+        chn_config.atx_id           = 'h02;
+        chn_config.atx_src_burst    = 2'b01; // INCR burst 
+        chn_config.atx_dst_burst    = 2'b01; // INCR burst
+        chn_config.atx_wd_per_burst = 'd05;  // 6 AXI transfers per burst
+        config_chn(chn_config);
+        
+        // Configure Channel[1]
+        chn_config.chn_id           = 'd01;
+        chn_config.chn_en           = 1'b1; // Enable channel 1
+        chn_config.chn_2d_xfer      = 1'b1; // On
+        chn_config.chn_cyclic_xfer  = 1'b0; // ON
+        chn_config.chn_irq_msk_com  = 1'b1; // Enable
+        chn_config.chn_irq_msk_qed  = 1'b0; // Disable
+        chn_config.chn_arb_rate     = 'h05;
+        chn_config.atx_id           = 'h07;
+        chn_config.atx_src_burst    = 2'b01; // INCR burst 
+        chn_config.atx_dst_burst    = 2'b01; // INCR burst
+        chn_config.atx_wd_per_burst = 'd07;  // 8 AXI transfers per burst
+        config_chn(chn_config);
+
+        // Push 1 Descriptor[0] to Channel[0]
+        desc_config.chn_id          = 'd00;
+        desc_config.src_addr        = SRC_BASE_ADDR + DST_0_IMG_SHIFT;  // Base + Shift
+        desc_config.dst_addr        = DST_0_BASE_ADDR;    // [31:30]: 2'b10
+        desc_config.xfer_xlen       = DST_0_IMG_W   * 16/ATX_DST_DATA_W - 1'b1; // Col Length = DST_0_IMG_W
+        desc_config.xfer_ylen       = DST_0_IMG_H   - 1'b1;  // Row Length = DST_0_IMG_H
+        desc_config.src_stride      = SRC_IMG_W     * 16/ATX_DST_DATA_W;
+        desc_config.dst_stride      = DST_0_IMG_W   * 16/ATX_DST_DATA_W;
+        config_desc(desc_config);
+
+        // Push 1 Descriptor[0] to Channel[1]
         desc_config.chn_id          = 'd01;
-        desc_config.src_addr        = 32'h7000_0000;
-        desc_config.dst_addr        = 32'h8000_0000;
-        desc_config.xfer_xlen       = 'd20; // Col Length = 21
-        desc_config.xfer_ylen       = 'd03; // Row Length = 4
-        desc_config.src_stride      = 'h1000;
-        desc_config.dst_stride      = 'h1000;
+        desc_config.src_addr        = SRC_BASE_ADDR + DST_1_IMG_SHIFT;  // Base + Shift 
+        desc_config.dst_addr        = DST_1_BASE_ADDR;    // [31:30]: 2'b11
+        desc_config.xfer_xlen       = DST_1_IMG_W   * 16/ATX_DST_DATA_W - 1'b1; // Col Length = DST_1_IMG_W
+        desc_config.xfer_ylen       = DST_1_IMG_H   - 1'b1; // Row Length = DST_1_IMG_H
+        desc_config.src_stride      = SRC_IMG_W     * 16/ATX_DST_DATA_W;
+        desc_config.dst_stride      = DST_1_IMG_W   * 16/ATX_DST_DATA_W;
         config_desc(desc_config);
-        
-        // Push 1 Descriptor[2] to Channel[0]
-        desc_config.chn_id          = 'd00;
-        desc_config.src_addr        = 32'h4100_0000;
-        desc_config.dst_addr        = 32'h3100_0000;
-        desc_config.xfer_xlen       = 'd03; // Col Length = 4
-        desc_config.xfer_ylen       = 'd01; // Row Length = 2
-        desc_config.src_stride      = 'h1000;
-        desc_config.dst_stride      = 'h1000;
-        config_desc(desc_config);
-        
-        // Push 1 Descriptor[3] to Channel[0]
-        desc_config.chn_id          = 'd00;
-        desc_config.src_addr        = 32'h4100_0000;
-        desc_config.dst_addr        = 32'h5100_0000;
-        desc_config.xfer_xlen       = 'd03; // Col Length = 4
-        desc_config.xfer_ylen       = 'd01; // Row Length = 2
-        desc_config.src_stride      = 'h1000;
-        desc_config.dst_stride      = 'h1000;
-        config_desc(desc_config);
-
-        /************************************************************************/
-        /****************** ADD YOUR CUSTOM CONFIGURATION HERE ******************/ 
-        /************************************************************************/
+`endif
     end
 
     initial begin   : AXI_MASTER_DRIVER
@@ -553,9 +614,42 @@ module axi_dma_tb;
             begin end
         join_none
     end
-    /*          DMA master monitor            */
-
-   /*           DeepCode                */
+    
+    /*          Read/Write Image             */
+`ifdef IMG_STREAM_MODE
+    initial begin
+        fork
+            begin : READ_IMG_FROM_FILE
+                $readmemh("L:/Projects/dma/axi_dma/sim/env/src_mem.txt", src_mem);
+            end
+            begin : WRITE_IMG_0_TO_FILE
+                int fd0;
+                #(`RST_DLY_START + `RST_DUR + 1); // Wait for reset ending
+                while(1'b1) begin
+                    wait(irq[0] == 1'b1); #0.1;
+                    aclk_cl;
+                    fd0 = $fopen("L:/Projects/dma/axi_dma/sim/env/dst_mem_0_format.txt", "w");
+                    $fwrite(fd0, "Image Size:\t\t%0d x %0d\nPixel Format:\tRGB565", DST_0_IMG_W, DST_0_IMG_H);
+                    $fclose(fd0);
+                    $writememh("L:/Projects/dma/axi_dma/sim/env/dst_mem_0.txt", dst_mem_0);
+                end
+            end
+            begin : WRITE_IMG_1_TO_FILE
+                int fd1;
+                #(`RST_DLY_START + `RST_DUR + 1); // Wait for reset ending
+                while(1'b1) begin
+                    wait(irq[1] == 1'b1); #0.1;
+                    aclk_cl;
+                    fd1 = $fopen("L:/Projects/dma/axi_dma/sim/env/dst_mem_1_format.txt", "w");
+                    $fwrite(fd1, "Image Size:\t\t%0d x %0d\nPixel Format:\tRGB565", DST_1_IMG_W, DST_1_IMG_H);
+                    $fclose(fd1);
+                    $writememh("L:/Projects/dma/axi_dma/sim/env/dst_mem_1.txt", dst_mem_1);
+                end
+            end
+        join_none
+    end
+`endif
+    /*           DeepCode                */
     task automatic aclk_cl;
         @(posedge aclk);
         #0.2; 
@@ -650,10 +744,10 @@ module axi_dma_tb;
         // arsize  = m_arsize_o; 
     endtask
     task automatic m_r_transfer (
-        input [MST_ID_W-1:0]    rid, 
-        input [DST_ADDR_W-1:0]  rdata,
-        input [ATX_RESP_W-1:0]  rresp,
-        input                   rlast
+        input [MST_ID_W-1:0]        rid, 
+        input [ATX_DST_DATA_W-1:0]  rdata,
+        input [ATX_RESP_W-1:0]      rresp,
+        input                       rlast
     );
         aclk_cl;
         m_rid_i     <= rid;
@@ -713,14 +807,6 @@ module axi_dma_tb;
                                 .wdata(w_temp.wdata[i]),
                                 .wlast(wlast_temp)
                             );
-                            // WDATA predictor
-                            if(w_temp.wdata[i] == i) begin
-                                // $display("[INFO]: Destination - Sample WDATA[%1d] = %h and WLAST = %1b)", i, w_temp.wdata[i], i, wlast_temp);
-                            end
-                            else begin
-                                $display("[FAIL]: Destination - Sample WDATA[%1d] = %h and Golden WDATA = %h)", i, w_temp.wdata[i], i);
-                                $stop;
-                            end
                             // WLAST predictor
                             if(wlast_temp == (i == aw_temp.axlen)) begin
                             
@@ -729,6 +815,26 @@ module axi_dma_tb;
                                 $display("[FAIL]: Destination - Wrong sample WLAST = %0d at WDATA = %8h (idx: %0d, AWLEN: %2d)", wlast_temp, w_temp.wdata[i], i, aw_temp.axlen);
                                 $stop;
                             end
+`ifdef CUSTOM_MODE
+                            // WDATA predictor
+                            if(w_temp.wdata[i] == i) begin
+                                // $display("[INFO]: Destination - Sample WDATA[%1d] = %h and WLAST = %1b)", i, w_temp.wdata[i], i, wlast_temp);
+                            end
+                            else begin
+                                $display("[FAIL]: Destination - Sample WDATA[%1d] = %h and Golden WDATA = %h)", i, w_temp.wdata[i], i);
+                                $stop;
+                            end
+`elsif IMG_STREAM_MODE
+                            if(aw_temp.axaddr[31:30] == DST_0_BASE_ADDR[31:30]) begin
+                                dst_mem_0[aw_temp.axaddr[29:0] + i] <= w_temp.wdata[i];
+                            end
+                            else if(aw_temp.axaddr[31:30] == DST_1_BASE_ADDR[31:30]) begin
+                                dst_mem_1[aw_temp.axaddr[29:0] + i] <= w_temp.wdata[i];
+                            end
+                            else begin
+                                $display("[FAIL]: Destination - Wrong address mapping region %8h)", aw_temp.axaddr);
+                            end
+`endif
                             // Handshake occurs 
                             aclk_cl;
                             // Stall random
@@ -755,7 +861,7 @@ module axi_dma_tb;
                             .bid(b_temp.bid),
                             .bresp(b_temp.bresp)
                         );
-                        $display("[INFO]: Destination - The transaction with ID-%0h has been completed", b_temp.bid);
+                        // $display("[INFO]: Destination - The transaction with ID-%0h has been completed", b_temp.bid);
                     end
                     else begin
                         // Wait 1 cycle
@@ -788,12 +894,21 @@ module axi_dma_tb;
                 forever begin
                     if(m_drv_ar_info.try_get(ar_temp)) begin
                         for(int i = 0; i <= ar_temp.axlen; i = i + 1) begin
+`ifdef CUSTOM_MODE
                             m_r_transfer (
                                 .rid(ar_temp.axid),
                                 .rdata(i),
                                 .rresp(2'b00),
                                 .rlast(i == ar_temp.axlen)
                             );
+`elsif IMG_STREAM_MODE
+                            m_r_transfer (
+                                .rid(ar_temp.axid),
+                                .rdata(src_mem[ar_temp.axaddr[29:0] + i]),
+                                .rresp(2'b00),
+                                .rlast(i == ar_temp.axlen)
+                            );
+`endif
                         end
                     end
                     else begin
