@@ -55,7 +55,8 @@ module adma_as_atx_fetch #(
     
     wire    [SRC_ADDR_W-1:0]    tx_src_addr_rem;
     wire    [DST_ADDR_W-1:0]    tx_dst_addr_rem;
-    wire    [DMA_LENGTH_W-1:0]  tx_len_rem;
+    wire    [DMA_LENGTH_W-1:0]  tx_len_enc_rem; // Encoded length (length = len_enc + 1)
+    wire    [DMA_LENGTH_W-1:0]  tx_len_rem;     // Actual length
     wire                        tx_rem_flg;
 
     // Module instantiation
@@ -67,7 +68,7 @@ module adma_as_atx_fetch #(
         .bwd_data   ({tx_src_addr,      tx_dst_addr,      tx_len}),
         .bwd_vld    (tx_vld),
         .bwd_rdy    (tx_rdy),
-        .rem_data   ({tx_src_addr_rem,  tx_dst_addr_rem,  tx_len_rem}),
+        .rem_data   ({tx_src_addr_rem,  tx_dst_addr_rem,  tx_len_enc_rem}),
         .rem_flg    (tx_rem_flg),
         .fwd_data   ({tx_src_addr_spl,  tx_dst_addr_spl,  tx_len_spl}),
         .fwd_vld    (tx_spl_vld),
@@ -76,7 +77,8 @@ module adma_as_atx_fetch #(
 
     // Combinational logic
     assign tx_rem_flg       = tx_spl_vld & (tx_len_spl > atx_wd_per_burst); // If the forward data is valid and the length of cur tx is higher than length of atx, the remaining flag will be HIGH 
-    assign tx_len_rem       = tx_len_spl - atx_wd_per_burst - 1'b1; // TX Remaining Length (= tx_len_rem+1) = TX splitted Length (= tx_len_spl+1) - Word per burst (= atx_wd_per_burst+1)
+    assign tx_len_rem       = tx_len_spl - atx_wd_per_burst;
+    assign tx_len_enc_rem   = tx_len_rem - 1'b1; // TX Remaining Length (= tx_len_enc_rem+1) = TX splitted Length (= tx_len_spl+1) - Word per burst (= atx_wd_per_burst+1)
     assign tx_src_addr_rem  = tx_src_addr_spl + ((atx_wd_per_burst+1'b1) & {DMA_LENGTH_W{~|(atx_src_burst^BURST_INCR)}}); // If (in burst increment mode) -> new_src_addr = old_src_addr + (number of word in the transaction)
     assign tx_dst_addr_rem  = tx_dst_addr_spl + ((atx_wd_per_burst+1'b1) & {DMA_LENGTH_W{~|(atx_dst_burst^BURST_INCR)}}); // If (in burst increment mode) -> new_dst_addr = old_dst_addr + (number of word in the transaction)
     // -- AXI Transaction generator
@@ -92,6 +94,6 @@ module adma_as_atx_fetch #(
     assign tx_spl_rdy       = atx_rdy;
 
     assign atx_start        = tx_spl_vld & tx_spl_rdy;
-    assign atx_start_last   = ~tx_len_rem;  // The last AXI Transaction of a DMA Transaction
+    assign atx_start_last   = ~|tx_len_rem;  // The last AXI Transaction of a DMA Transaction -> No more remaining transaction
     
 endmodule
