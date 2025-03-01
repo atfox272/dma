@@ -30,6 +30,7 @@ module axi_dma #(
     // -- AW channel         
     input   [MST_ID_W-1:0]          s_awid_i,
     input   [S_ADDR_W-1:0]          s_awaddr_i,
+    input   [1:0]                   s_awburst_i,
     input   [ATX_LEN_W-1:0]         s_awlen_i,
     input                           s_awvalid_i,
     output                          s_awready_o,
@@ -46,6 +47,7 @@ module axi_dma #(
     // -- AR channel         
     input   [MST_ID_W-1:0]          s_arid_i,
     input   [S_ADDR_W-1:0]          s_araddr_i,
+    input   [1:0]                   s_arburst_i,
     input   [ATX_LEN_W-1:0]         s_arlen_i,
     input                           s_arvalid_i,
     output                          s_arready_o,
@@ -191,6 +193,7 @@ module axi_dma #(
         .s_awid_i           (s_awid_i),
         .s_awaddr_i         (s_awaddr_i),
         .s_awlen_i          (s_awlen_i),
+        .s_awburst_i        (s_awburst_i),
         .s_awvalid_i        (s_awvalid_i),
         .s_awready_o        (s_awready_o),
         .s_wdata_i          (s_wdata_i),
@@ -203,6 +206,7 @@ module axi_dma #(
         .s_bready_i         (s_bready_i),
         .s_arid_i           (s_arid_i),
         .s_araddr_i         (s_araddr_i),
+        .s_arburst_i        (s_arburst_i),
         .s_arlen_i          (s_arlen_i),
         .s_arvalid_i        (s_arvalid_i),
         .s_arready_o        (s_arready_o),

@@ -26,6 +26,7 @@ module adma_reg_map
     // -- AW channel         
     input   [MST_ID_W-1:0]          s_awid_i,
     input   [S_ADDR_W-1:0]          s_awaddr_i,
+    input   [1:0]                   s_awburst_i,
     input   [ATX_LEN_W-1:0]         s_awlen_i,
     input                           s_awvalid_i,
     output                          s_awready_o,
@@ -42,6 +43,7 @@ module adma_reg_map
     // -- AR channel         
     input   [MST_ID_W-1:0]          s_arid_i,
     input   [S_ADDR_W-1:0]          s_araddr_i,
+    input   [1:0]                   s_arburst_i,
     input   [ATX_LEN_W-1:0]         s_arlen_i,
     input                           s_arvalid_i,
     output                          s_arready_o,
@@ -135,6 +137,7 @@ module adma_reg_map
         .rst_n              (aresetn),
         .m_awid_i           (s_awid_i),
         .m_awaddr_i         (s_awaddr_i),
+        .m_awburst_i        (s_awburst_i),
         .m_awlen_i          (s_awlen_i),
         .m_awvalid_i        (s_awvalid_i),
         .m_wdata_i          (s_wdata_i),
@@ -143,6 +146,7 @@ module adma_reg_map
         .m_bready_i         (s_bready_i),
         .m_arid_i           (s_arid_i),
         .m_araddr_i         (s_araddr_i),
+        .m_arburst_i        (s_arburst_i),
         .m_arlen_i          (s_arlen_i),
         .m_arvalid_i        (s_arvalid_i),
         .m_rready_i         (s_rready_i),

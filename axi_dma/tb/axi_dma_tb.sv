@@ -134,6 +134,7 @@ module axi_dma_tb;
     // -- AW channel         
     logic   [MST_ID_W-1:0]          s_awid_i;
     logic   [S_ADDR_W-1:0]          s_awaddr_i;
+    logic   [1:0]                   s_awburst_i;
     logic   [ATX_LEN_W-1:0]         s_awlen_i;
     logic                           s_awvalid_i;
     logic                           s_awready_o;
@@ -150,6 +151,7 @@ module axi_dma_tb;
     // -- AR channel         
     logic   [MST_ID_W-1:0]          s_arid_i;
     logic   [S_ADDR_W-1:0]          s_araddr_i;
+    logic   [1:0]                   s_arburst_i;
     logic   [ATX_LEN_W-1:0]         s_arlen_i;
     logic                           s_arvalid_i;
     logic                           s_arready_o;
@@ -432,7 +434,7 @@ module axi_dma_tb;
                 atx_ax_info aw_temp;
                 forever begin
                     if(s_seq_aw_info.try_get(aw_temp)) begin
-                        s_aw_transfer(.s_awid(aw_temp.axid), .s_awaddr(aw_temp.axaddr), .s_awlen(aw_temp.axlen));
+                        s_aw_transfer(.s_awid(aw_temp.axid), .s_awaddr(aw_temp.axaddr), .s_awburst(2'b01), .s_awlen(aw_temp.axlen));
                     end
                     else begin
                         aclk_cl;    // Penalty 1 cycle
@@ -457,9 +459,9 @@ module axi_dma_tb;
             end
             begin   : AR_DRV
                 // 1st: TRANSFER_ID
-                s_ar_transfer(.s_arid(5'h00), .s_araddr(32'h8000_2001), .s_arlen(8'd00));
+                s_ar_transfer(.s_arid(5'h00), .s_araddr(32'h8000_2001), .s_arburst(2'b01), .s_arlen(8'd00));
                 // 2nd: TRANSFER_ID
-                s_ar_transfer(.s_arid(5'h00), .s_araddr(32'h8000_2001), .s_arlen(8'd00));
+                s_ar_transfer(.s_arid(5'h00), .s_araddr(32'h8000_2001), .s_arburst(2'b01), .s_arlen(8'd00));
                 aclk_cl;
                 s_arvalid_i <= 1'b0;
             end
@@ -657,11 +659,13 @@ module axi_dma_tb;
     task automatic s_aw_transfer(
         input [MST_ID_W-1:0]    s_awid,
         input [S_ADDR_W-1:0]    s_awaddr,
+        input [1:0]             s_awburst,
         input [ATX_LEN_W-1:0]   s_awlen
     );
         aclk_cl;
         s_awid_i            <= s_awid;
         s_awaddr_i          <= s_awaddr;
+        s_awburst_i         <= s_awburst;
         s_awlen_i           <= s_awlen;
         s_awvalid_i         <= 1'b1;
         // Handshake occur
@@ -683,11 +687,13 @@ module axi_dma_tb;
     task automatic s_ar_transfer(
         input [MST_ID_W-1:0]    s_arid,
         input [S_ADDR_W-1:0]    s_araddr,
+        input [1:0]             s_arburst,
         input [ATX_LEN_W-1:0]   s_arlen
     );
         aclk_cl;
         s_arid_i            <= s_arid;
         s_araddr_i          <= s_araddr;
+        s_arburst_i         <= s_arburst;
         s_arlen_i           <= s_arlen;
         s_arvalid_i         <= 1'b1;
         // Handshake occur
