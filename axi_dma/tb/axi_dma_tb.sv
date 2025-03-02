@@ -37,6 +37,8 @@ parameter DMA_DESC_DEPTH    = 4;    // The maximum number of descriptors in each
 parameter DMA_CHN_ARB_W     = 3;    // Channel arbitration weight's width
 parameter ROB_EN            = 0;    // Reorder multiple AXI outstanding transactions enable
 parameter DESC_QUEUE_TYPE   = (DMA_DESC_DEPTH >= 16) ? "RAM-BASED" : "FLIPFLOP-BASED";
+parameter SRC_IF_TYPE       = "AXI4"; // "AXI4" || "AXIS"
+parameter DST_IF_TYPE       = "AXI4"; // "AXI4" || "AXIS"
 parameter ATX_SRC_DATA_W    = 256;
 parameter ATX_DST_DATA_W    = 256;
 parameter S_DATA_W          = 32;
@@ -47,6 +49,8 @@ parameter MST_ID_W          = 5;
 parameter ATX_LEN_W         = 8;
 parameter ATX_SIZE_W        = 3;
 parameter ATX_RESP_W        = 2;
+parameter ATX_SRC_BYTE_AMT  = ATX_SRC_DATA_W/8;
+parameter ATX_DST_BYTE_AMT  = ATX_DST_DATA_W/8;
 parameter ATX_NUM_OSTD      = (DMA_CHN_NUM > 1) ? DMA_CHN_NUM : 2;  // Number of outstanding transactions in AXI bus (recmd: equal to the number of channel)
 parameter ATX_INTL_DEPTH    = 16; // Interleaving depth on the AXI data channel 
 
@@ -178,6 +182,15 @@ module axi_dma_tb;
     logic                           m_rlast_i;
     logic                           m_rvalid_i;
     logic                           m_rready_o;
+    // -- AXI-Stream
+    logic   [MST_ID_W-1:0]          s_tid_i;    
+    logic                           s_tdest_i;  // Not-use
+    logic   [ATX_SRC_DATA_W-1:0]    s_tdata_i;
+    logic   [ATX_SRC_BYTE_AMT-1:0]  s_tkeep_i;
+    logic   [ATX_SRC_BYTE_AMT-1:0]  s_tstrb_i;
+    logic                           s_tlast_i;
+    logic                           s_tvalid_i;
+    logic                           s_tready_o;
 
     // AXI4 Master Write (destination) port
     // -- AW channel         
@@ -227,6 +240,8 @@ module axi_dma_tb;
         .DMA_CHN_ARB_W  (DMA_CHN_ARB_W),
         .ROB_EN         (ROB_EN),
         .DESC_QUEUE_TYPE(DESC_QUEUE_TYPE),
+        .SRC_IF_TYPE    (SRC_IF_TYPE),
+        .DST_IF_TYPE    (DST_IF_TYPE),
         .ATX_SRC_DATA_W (ATX_SRC_DATA_W),
         .ATX_DST_DATA_W (ATX_DST_DATA_W),
         .S_DATA_W       (S_DATA_W),
@@ -237,6 +252,8 @@ module axi_dma_tb;
         .ATX_LEN_W      (ATX_LEN_W),
         .ATX_SIZE_W     (ATX_SIZE_W),
         .ATX_RESP_W     (ATX_RESP_W),
+        .ATX_SRC_BYTE_AMT(ATX_SRC_BYTE_AMT),
+        .ATX_DST_BYTE_AMT(ATX_DST_BYTE_AMT),
         .ATX_NUM_OSTD   (ATX_NUM_OSTD),
         .ATX_INTL_DEPTH (ATX_INTL_DEPTH)
     ) dut (

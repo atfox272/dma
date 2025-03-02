@@ -2,15 +2,21 @@ module adma_data_mover #(
     // DMA
     parameter DMA_CHN_NUM       = 4,    // Number of DMA channels
     parameter ROB_EN            = 1,
-    // AXI Interface
+    // SOURCE 
+    parameter SRC_IF_TYPE       = "AXI4", // "AXI4" || "AXIS"
     parameter SRC_ADDR_W        = 32,
+    parameter ATX_SRC_DATA_W    = 256,
+    // DESITNATION 
+    parameter DST_IF_TYPE       = "AXI4", // "AXI4" || "AXIS"
     parameter DST_ADDR_W        = 32,
+    parameter ATX_DST_DATA_W    = 256,
+    // AXI Interface
     parameter MST_ID_W          = 5,
     parameter ATX_LEN_W         = 8,
     parameter ATX_SIZE_W        = 3,
     parameter ATX_RESP_W        = 2,
-    parameter ATX_SRC_DATA_W    = 256,
-    parameter ATX_DST_DATA_W    = 256,
+    parameter ATX_SRC_BYTE_AMT  = ATX_SRC_DATA_W/8,
+    parameter ATX_DST_BYTE_AMT  = ATX_DST_DATA_W/8,
     parameter ATX_NUM_OSTD      = (DMA_CHN_NUM > 1) ? DMA_CHN_NUM : 2,   // Number of outstanding transactions in AXI bus (recmd: equal to the number of channel)
     parameter ATX_INTL_DEPTH    = 16, // Interleaving depth on the AXI data channel 
     // Do not configure these
@@ -35,38 +41,61 @@ module adma_data_mover #(
     output                          atx_done    [0:DMA_CHN_NUM-1],
     output                          atx_src_err [0:DMA_CHN_NUM-1],
     output                          atx_dst_err [0:DMA_CHN_NUM-1],
-    // AXI Master Interface
-    // -- AR channel         
+    
+    // Source Interface
+    // -- AXI4 
+    // -- -- AR channel         
     output  [MST_ID_W-1:0]          m_arid_o,
     output  [SRC_ADDR_W-1:0]        m_araddr_o,
     output  [ATX_LEN_W-1:0]         m_arlen_o,
     output  [1:0]                   m_arburst_o,
     output                          m_arvalid_o,
     input                           m_arready_i,
-    // -- -- R channel  
+    // -- -- R channel          
     input   [MST_ID_W-1:0]          m_rid_i,
     input   [ATX_SRC_DATA_W-1:0]    m_rdata_i,
     input   [ATX_RESP_W-1:0]        m_rresp_i,
     input                           m_rlast_i,
     input                           m_rvalid_i,
     output                          m_rready_o,
-    // -- AW channel         
+    // -- AXI-Stream
+    input   [MST_ID_W-1:0]          s_tid_i,    
+    input                           s_tdest_i,  // Not-use
+    input   [ATX_SRC_DATA_W-1:0]    s_tdata_i,
+    input   [ATX_SRC_BYTE_AMT-1:0]  s_tkeep_i,
+    input   [ATX_SRC_BYTE_AMT-1:0]  s_tstrb_i,
+    input                           s_tlast_i,
+    input                           s_tvalid_i,
+    output                          s_tready_o,
+    
+    // Destination Interface
+    // -- AXI4
+    // -- -- AW channel         
     output  [MST_ID_W-1:0]          m_awid_o,
     output  [DST_ADDR_W-1:0]        m_awaddr_o,
     output  [ATX_LEN_W-1:0]         m_awlen_o,
     output  [1:0]                   m_awburst_o,
     output                          m_awvalid_o,
     input                           m_awready_i,
-    // -- W channel          
+    // -- -- W channel          
     output  [ATX_DST_DATA_W-1:0]    m_wdata_o,
     output                          m_wlast_o,
     output                          m_wvalid_o,
     input                           m_wready_i,
-    // -- B channel
+    // -- -- B channel
     input   [MST_ID_W-1:0]          m_bid_i,
     input   [ATX_RESP_W-1:0]        m_bresp_i,
     input                           m_bvalid_i,
-    output                          m_bready_o
+    output                          m_bready_o,
+    // -- AXI-Stream
+    output  [MST_ID_W-1:0]          m_tid_o,    
+    output                          m_tdest_o,  // Not-use
+    output  [ATX_DST_DATA_W-1:0]    m_tdata_o,
+    output  [ATX_DST_BYTE_AMT-1:0]  m_tkeep_o,
+    output  [ATX_DST_BYTE_AMT-1:0]  m_tstrb_o,
+    output                          m_tlast_o,
+    output                          m_tvalid_o,
+    input                           m_tready_i
 );
     // Internal signal
     wire                        atx_vld_flt;
@@ -86,8 +115,10 @@ module adma_data_mover #(
         .SRC_ADDR_W     (SRC_ADDR_W),
         .MST_ID_W       (MST_ID_W),
         .ATX_LEN_W      (ATX_LEN_W),
+        .SRC_IF_TYPE    (SRC_IF_TYPE),
         .ATX_SIZE_W     (ATX_SIZE_W),
         .ATX_RESP_W     (ATX_RESP_W),
+        .ATX_SRC_BYTE_AMT(ATX_SRC_BYTE_AMT),
         .ATX_SRC_DATA_W (ATX_SRC_DATA_W),
         .ATX_NUM_OSTD   (ATX_NUM_OSTD),
         .ATX_INTL_DEPTH (ATX_INTL_DEPTH)
@@ -117,18 +148,28 @@ module adma_data_mover #(
         .m_rresp_i      (m_rresp_i),
         .m_rlast_i      (m_rlast_i),
         .m_rvalid_i     (m_rvalid_i),
-        .m_rready_o     (m_rready_o)
+        .m_rready_o     (m_rready_o),
+        .s_tid_i        (s_tid_i),
+        .s_tdest_i      (s_tdest_i),
+        .s_tdata_i      (s_tdata_i),
+        .s_tkeep_i      (s_tkeep_i),
+        .s_tstrb_i      (s_tstrb_i),
+        .s_tlast_i      (s_tlast_i),
+        .s_tvalid_i     (s_tvalid_i),
+        .s_tready_o     (s_tready_o)
     );
     // -- Write host
     adma_dm_wr_host #(
         .DMA_CHN_NUM    (DMA_CHN_NUM),
         .ROB_EN         (ROB_EN),
+        .DST_IF_TYPE    (DST_IF_TYPE), 
         .DST_ADDR_W     (DST_ADDR_W),
         .MST_ID_W       (MST_ID_W),
         .ATX_LEN_W      (ATX_LEN_W),
         .ATX_SIZE_W     (ATX_SIZE_W),
         .ATX_RESP_W     (ATX_RESP_W),
         .ATX_DST_DATA_W (ATX_DST_DATA_W),
+        .ATX_DST_BYTE_AMT(ATX_DST_BYTE_AMT),
         .ATX_NUM_OSTD   (ATX_NUM_OSTD),
         .ATX_INTL_DEPTH (ATX_INTL_DEPTH)
     ) wh (
@@ -160,7 +201,16 @@ module adma_data_mover #(
         .m_bid_i        (m_bid_i),
         .m_bresp_i      (m_bresp_i),
         .m_bvalid_i     (m_bvalid_i),
-        .m_bready_o     (m_bready_o)
+        .m_bready_o     (m_bready_o),
+        .m_tid_o        (m_tid_o),
+        .m_tdest_o      (m_tdest_o),
+        .m_tdata_o      (m_tdata_o),
+        .m_tkeep_o      (m_tkeep_o),
+        .m_tstrb_o      (m_tstrb_o),
+        .m_tlast_o      (m_tlast_o),
+        .m_tvalid_o     (m_tvalid_o),
+        .m_tready_i     (m_tready_i)
+
     );
     // -- Data buffer
     adma_dm_data_buf #(

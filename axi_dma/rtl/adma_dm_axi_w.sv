@@ -85,7 +85,7 @@ module adma_dm_axi_w #(
                 wdata_cnt <= {ATX_LEN_W{1'b0}};
             end
             else begin
-                wdata_cnt <= wdata_cnt + db_hsk;
+                wdata_cnt <= wdata_cnt + 1'b1;
             end
         end
     end

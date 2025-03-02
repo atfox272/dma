@@ -3,12 +3,14 @@ module adma_dm_wr_host #(
     parameter DMA_CHN_NUM       = 4,    // Number of DMA channels
     parameter ROB_EN            = 1,
     // AXI Interface
+    parameter DST_IF_TYPE       = "AXI4", // "AXI4" || "AXIS"
     parameter DST_ADDR_W        = 32,
     parameter MST_ID_W          = 5,
     parameter ATX_LEN_W         = 8,
     parameter ATX_SIZE_W        = 3,
     parameter ATX_RESP_W        = 2,
     parameter ATX_DST_DATA_W    = 256,
+    parameter ATX_DST_BYTE_AMT  = ATX_DST_DATA_W/8,
     parameter ATX_NUM_OSTD      = DMA_CHN_NUM,   // Number of outstanding transactions in AXI bus (recmd: equal to the number of channel)
     parameter ATX_INTL_DEPTH    = 16, // Interleaving depth on the AXI data channel 
     // Do not configure these
@@ -48,7 +50,16 @@ module adma_dm_wr_host #(
     input   [MST_ID_W-1:0]          m_bid_i,
     input   [ATX_RESP_W-1:0]        m_bresp_i,
     input                           m_bvalid_i,
-    output                          m_bready_o
+    output                          m_bready_o,
+    // -- AXI-Stream Master Interface
+    output  [MST_ID_W-1:0]          m_tid_o,    
+    output                          m_tdest_o,  // Not-use
+    output  [ATX_DST_DATA_W-1:0]    m_tdata_o,
+    output  [ATX_DST_BYTE_AMT-1:0]  m_tkeep_o,
+    output  [ATX_DST_BYTE_AMT-1:0]  m_tstrb_o,
+    output                          m_tlast_o,
+    output                          m_tvalid_o,
+    input                           m_tready_i
 );
     // Internal signal
     wire atx_vld_flt;
@@ -56,6 +67,8 @@ module adma_dm_wr_host #(
     wire atx_w_rdy;
     wire atx_b_rdy;
     // Module instantiation
+generate
+if(DST_IF_TYPE == "AXI4") begin : DST_AXI4_GEN
     // -- AW channel
     adma_dm_axi_ax #(
         .ATX_ADDR_W     (DST_ADDR_W),
@@ -122,7 +135,59 @@ module adma_dm_wr_host #(
         .m_bvalid_i     (m_bvalid_i),
         .m_bready_o     (m_bready_o)
     );
-    // Combinational logic
     assign atx_rdy      = atx_aw_rdy & atx_w_rdy & atx_b_rdy;
     assign atx_vld_flt  = atx_vld & atx_rdy;
+    // Disable AXI-Stream interface
+    assign m_tid_o      = {MST_ID_W{1'b0}};
+    assign m_tdest_o    = 1'b0;
+    assign m_tdata_o    = {ATX_DST_DATA_W{1'b0}};
+    assign m_tkeep_o    = {ATX_DST_BYTE_AMT{1'b0}};
+    assign m_tstrb_o    = {ATX_DST_BYTE_AMT{1'b0}};
+    assign m_tlast_o    = 1'b0;
+    assign m_tvalid_o   = 1'b0;
+end
+else if (DST_IF_TYPE == "AXIS") begin : DST_AXIS_GEN
+    // -- AXI-Stream master
+    adma_dm_dst_axis #(
+        .DMA_CHN_NUM    (DMA_CHN_NUM),
+        .MST_ID_W       (MST_ID_W),
+        .ATX_LEN_W      (ATX_LEN_W),
+        .ATX_DST_DATA_W (ATX_DST_DATA_W),
+        .ATX_DST_BYTE_AMT(ATX_DST_BYTE_AMT),
+        .ATX_NUM_OSTD   (ATX_NUM_OSTD),
+        .DMA_CHN_NUM_W  (DMA_CHN_NUM_W)
+    ) am (
+        .aclk           (clk),
+        .aresetn        (rst_n),
+        .atx_chn_id     (atx_chn_id),
+        .atx_awlen      (atx_awlen),
+        .atx_vld        (atx_vld),
+        .atx_rdy        (atx_rdy),
+        .atx_wdata      (atx_wdata),
+        .atx_wdata_vld  (atx_wdata_vld),
+        .atx_wdata_rdy  (atx_wdata_rdy),
+        .atx_id         (atx_id),
+        .atx_done       (atx_done),
+        .atx_dst_err    (atx_dst_err),
+        .m_tid_o        (m_tid_o),
+        .m_tdest_o      (m_tdest_o),
+        .m_tdata_o      (m_tdata_o),
+        .m_tkeep_o      (m_tkeep_o),
+        .m_tstrb_o      (m_tstrb_o),
+        .m_tlast_o      (m_tlast_o),
+        .m_tvalid_o     (m_tvalid_o),
+        .m_tready_i     (m_tready_i)
+    );
+    // Disable AXI4 interface
+    assign m_awid_o      = {MST_ID_W{1'b0}};
+    assign m_awaddr_o    = {DST_ADDR_W{1'b0}};
+    assign m_awlen_o     = {ATX_LEN_W{1'b0}};
+    assign m_awburst_o   = 2'b0;
+    assign m_awvalid_o   = 1'b0;
+    assign m_wdata_o     = {ATX_DST_DATA_W{1'b0}};
+    assign m_wlast_o     = 1'b0;
+    assign m_wvalid_o    = 1'b0;
+    assign m_bready_o    = 1'b0;
+end
+endgenerate
 endmodule
