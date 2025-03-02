@@ -10,10 +10,12 @@ module axi_dma #(
     // SOURCE 
     parameter SRC_IF_TYPE       = "AXIS", // "AXI4" || "AXIS"
     parameter SRC_ADDR_W        = 32,
+    parameter SRC_TDEST_W       = 2,
     parameter ATX_SRC_DATA_W    = 256,
     // DESITNATION 
     parameter DST_IF_TYPE       = "AXIS", // "AXI4" || "AXIS"
     parameter DST_ADDR_W        = 32,
+    parameter DST_TDEST_W       = 2,
     parameter ATX_DST_DATA_W    = 256,
     // AXI Slave
     parameter S_DATA_W          = 32,
@@ -82,7 +84,7 @@ module axi_dma #(
     output                          m_rready_o,
     // -- AXI-Stream Slave
     input   [MST_ID_W-1:0]          s_tid_i,    
-    input                           s_tdest_i,  // Not-use
+    input   [SRC_TDEST_W-1:0]       s_tdest_i,  // Not-use
     input   [ATX_SRC_DATA_W-1:0]    s_tdata_i,
     input   [ATX_SRC_BYTE_AMT-1:0]  s_tkeep_i,
     input   [ATX_SRC_BYTE_AMT-1:0]  s_tstrb_i,
@@ -111,7 +113,7 @@ module axi_dma #(
     output                          m_bready_o,
     // -- AXI-Stream
     output  [MST_ID_W-1:0]          m_tid_o,    
-    output                          m_tdest_o,  // Not-use
+    output  [DST_TDEST_W-1:0]       m_tdest_o,
     output  [ATX_DST_DATA_W-1:0]    m_tdata_o,
     output  [ATX_DST_BYTE_AMT-1:0]  m_tkeep_o,
     output  [ATX_DST_BYTE_AMT-1:0]  m_tstrb_o,
@@ -383,7 +385,9 @@ module axi_dma #(
         .SRC_IF_TYPE        (SRC_IF_TYPE),
         .DST_IF_TYPE        (DST_IF_TYPE),
         .SRC_ADDR_W         (SRC_ADDR_W),
+        .SRC_TDEST_W        (SRC_TDEST_W),
         .DST_ADDR_W         (DST_ADDR_W),
+        .DST_TDEST_W        (DST_TDEST_W),
         .MST_ID_W           (MST_ID_W),
         .ATX_LEN_W          (ATX_LEN_W),
         .ATX_SIZE_W         (ATX_SIZE_W),

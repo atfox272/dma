@@ -5,6 +5,7 @@ module adma_dm_src_axis #(
     // AXI-Stream
     parameter ATX_SRC_DATA_W    = 256,
     parameter ATX_SRC_BYTE_AMT  = ATX_SRC_DATA_W/8,
+    parameter SRC_TDEST_W       = 2,
     parameter MST_ID_W          = 5,
     parameter ATX_LEN_W         = 8,
     parameter ATX_NUM_OSTD      = DMA_CHN_NUM,   // Number of outstanding transactions in AXI bus (recmd: equal to the number of channel)
@@ -25,7 +26,7 @@ module adma_dm_src_axis #(
     output                          atx_src_err [0:DMA_CHN_NUM-1],
     // -- AXI-Stream
     input   [MST_ID_W-1:0]          s_tid_i,    
-    input                           s_tdest_i,  // Not-use
+    input   [SRC_TDEST_W-1:0]       s_tdest_i,  // Not-use
     input   [ATX_SRC_DATA_W-1:0]    s_tdata_i,
     input   [ATX_SRC_BYTE_AMT-1:0]  s_tkeep_i,
     input   [ATX_SRC_BYTE_AMT-1:0]  s_tstrb_i,
@@ -56,8 +57,8 @@ module adma_dm_src_axis #(
         .SBUF_TYPE      (4),    // Bypass
         .DATA_WIDTH     (AXIS_INFO_W) 
     ) axis_sb (
-        .clk            (clk),
-        .rst_n          (rst_n),
+        .clk            (aclk),
+        .rst_n          (aresetn),
         .bwd_data_i     ({s_tid_i,  s_tdata_i,  s_tkeep_i,  s_tstrb_i, s_tlast_i}),
         .bwd_valid_i    (s_tvalid_i),
         .bwd_ready_o    (s_tready_o),
@@ -75,8 +76,8 @@ if(ROB_EN == 1) begin : ROB_GEN
         .DATA_W         (ROB_INFO_W),
         .LEN_W          (ATX_LEN_W)
     ) rob (
-        .clk            (clk),
-        .rst_n          (rst_n),
+        .clk            (aclk),
+        .rst_n          (aresetn),
         .bwd_id         (s_tid),
         .bwd_data       (s_tdata),
         .bwd_vld        (s_tvalid),
@@ -95,7 +96,7 @@ else begin : ROB_BYPASS_GEN
     assign fwd_rob_dat  = s_tdata;
     assign fwd_rob_vld  = s_tvalid;
     assign s_tready     = fwd_rob_rdy;
-    assign rob_ord_rdy  = 1'b1;
+    assign atx_rdy      = 1'b1;
 end
 endgenerate
     assign atx_rdata    = fwd_rob_dat;

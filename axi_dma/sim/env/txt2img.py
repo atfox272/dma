@@ -51,6 +51,10 @@ def process_files(directory):
             format_path = os.path.join(directory, format_file)
             data_path = os.path.join(directory, data_file)
             
+            if os.path.getsize(format_path) == 0:
+                print(f'Skipping {data_file}, because DMA channel {num} is disable')
+                continue
+            
             width, height = read_image_size(format_path)
             data = read_image_data(data_path, width, height)
             image = create_image(data, width, height)

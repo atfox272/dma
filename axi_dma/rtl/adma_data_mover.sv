@@ -5,10 +5,12 @@ module adma_data_mover #(
     // SOURCE 
     parameter SRC_IF_TYPE       = "AXI4", // "AXI4" || "AXIS"
     parameter SRC_ADDR_W        = 32,
+    parameter SRC_TDEST_W       = 2,
     parameter ATX_SRC_DATA_W    = 256,
     // DESITNATION 
     parameter DST_IF_TYPE       = "AXI4", // "AXI4" || "AXIS"
     parameter DST_ADDR_W        = 32,
+    parameter DST_TDEST_W       = 2,
     parameter ATX_DST_DATA_W    = 256,
     // AXI Interface
     parameter MST_ID_W          = 5,
@@ -60,7 +62,7 @@ module adma_data_mover #(
     output                          m_rready_o,
     // -- AXI-Stream
     input   [MST_ID_W-1:0]          s_tid_i,    
-    input                           s_tdest_i,  // Not-use
+    input   [SRC_TDEST_W-1:0]       s_tdest_i,
     input   [ATX_SRC_DATA_W-1:0]    s_tdata_i,
     input   [ATX_SRC_BYTE_AMT-1:0]  s_tkeep_i,
     input   [ATX_SRC_BYTE_AMT-1:0]  s_tstrb_i,
@@ -89,7 +91,7 @@ module adma_data_mover #(
     output                          m_bready_o,
     // -- AXI-Stream
     output  [MST_ID_W-1:0]          m_tid_o,    
-    output                          m_tdest_o,  // Not-use
+    output  [DST_TDEST_W-1:0]       m_tdest_o,
     output  [ATX_DST_DATA_W-1:0]    m_tdata_o,
     output  [ATX_DST_BYTE_AMT-1:0]  m_tkeep_o,
     output  [ATX_DST_BYTE_AMT-1:0]  m_tstrb_o,
@@ -112,10 +114,11 @@ module adma_data_mover #(
     adma_dm_rd_host #(
         .DMA_CHN_NUM    (DMA_CHN_NUM),
         .ROB_EN         (ROB_EN),
+        .SRC_IF_TYPE    (SRC_IF_TYPE),
         .SRC_ADDR_W     (SRC_ADDR_W),
+        .SRC_TDEST_W    (SRC_TDEST_W),
         .MST_ID_W       (MST_ID_W),
         .ATX_LEN_W      (ATX_LEN_W),
-        .SRC_IF_TYPE    (SRC_IF_TYPE),
         .ATX_SIZE_W     (ATX_SIZE_W),
         .ATX_RESP_W     (ATX_RESP_W),
         .ATX_SRC_BYTE_AMT(ATX_SRC_BYTE_AMT),
@@ -164,6 +167,7 @@ module adma_data_mover #(
         .ROB_EN         (ROB_EN),
         .DST_IF_TYPE    (DST_IF_TYPE), 
         .DST_ADDR_W     (DST_ADDR_W),
+        .DST_TDEST_W    (DST_TDEST_W),
         .MST_ID_W       (MST_ID_W),
         .ATX_LEN_W      (ATX_LEN_W),
         .ATX_SIZE_W     (ATX_SIZE_W),

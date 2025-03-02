@@ -28,6 +28,9 @@
 `define WREADY_STALL_MAX    0
 `define BREADY_STALL_MAX    0
 
+parameter SRC_IF_TYPE       = "AXIS"; // "AXI4" || "AXIS"
+parameter DST_IF_TYPE       = "AXI4"; // "AXI4" || "AXIS"
+
 `define END_TIME            100000
 
 parameter DMA_BASE_ADDR     = 32'h8000_0000;
@@ -37,14 +40,14 @@ parameter DMA_DESC_DEPTH    = 4;    // The maximum number of descriptors in each
 parameter DMA_CHN_ARB_W     = 3;    // Channel arbitration weight's width
 parameter ROB_EN            = 0;    // Reorder multiple AXI outstanding transactions enable
 parameter DESC_QUEUE_TYPE   = (DMA_DESC_DEPTH >= 16) ? "RAM-BASED" : "FLIPFLOP-BASED";
-parameter SRC_IF_TYPE       = "AXI4"; // "AXI4" || "AXIS"
-parameter DST_IF_TYPE       = "AXI4"; // "AXI4" || "AXIS"
 parameter ATX_SRC_DATA_W    = 256;
 parameter ATX_DST_DATA_W    = 256;
 parameter S_DATA_W          = 32;
 parameter S_ADDR_W          = 32;
 parameter SRC_ADDR_W        = 32;
+parameter SRC_TDEST_W       = 2;
 parameter DST_ADDR_W        = 32;
+parameter DST_TDEST_W       = 2;
 parameter MST_ID_W          = 5;
 parameter ATX_LEN_W         = 8;
 parameter ATX_SIZE_W        = 3;
@@ -61,8 +64,8 @@ parameter SRC_IMG_H         = 480;  // height
 parameter SRC_MEM_SIZE      = (SRC_IMG_W /(ATX_SRC_DATA_W/SRC_PXL_W)) * SRC_IMG_H;  // Image size 640x480
 parameter SRC_BASE_ADDR     = 32'h0000_0000;
 // Destination[0] image
-parameter DST_0_IMG_W       = 320;  // width
-parameter DST_0_IMG_H       = 240;  // depth
+parameter DST_0_IMG_W       = (SRC_IF_TYPE== "AXI4") ? 320 : SRC_IMG_W;  // width
+parameter DST_0_IMG_H       = (SRC_IF_TYPE== "AXI4") ? 240 : SRC_IMG_H;  // depth
 parameter DST_0_PXL_W       = 16;   // pixel format RGB565
 parameter DST_0_MEM_SIZE    = (DST_0_IMG_W /(ATX_DST_DATA_W/DST_0_PXL_W)) * DST_0_IMG_H;  // Image size 320x240
 parameter DST_0_BASE_ADDR   = 32'h8000_0000;
@@ -71,8 +74,8 @@ parameter DST_0_IMG_START_Y = 100;
 parameter DST_0_IMG_SHIFT   = (DST_0_IMG_START_X /(ATX_DST_DATA_W/DST_0_PXL_W)) + (DST_0_IMG_START_Y * (SRC_IMG_W /(ATX_SRC_DATA_W/SRC_PXL_W)));
 // Destination[1] image
 parameter DST_1_PXL_W       = 16;   // pixel format RGB565
-parameter DST_1_IMG_W       = 320;  // width
-parameter DST_1_IMG_H       = 240;  // depth
+parameter DST_1_IMG_W       = (SRC_IF_TYPE== "AXI4") ? 320 : SRC_IMG_W;  // width
+parameter DST_1_IMG_H       = (SRC_IF_TYPE== "AXI4") ? 240 : SRC_IMG_H;  // depth
 parameter DST_1_MEM_SIZE    = (DST_1_IMG_W /(ATX_DST_DATA_W/DST_1_PXL_W)) * DST_1_IMG_H;  // Image size 320x240
 parameter DST_1_BASE_ADDR   = 32'hC000_0000;
 parameter DST_1_IMG_START_X = 100;
@@ -99,6 +102,14 @@ typedef struct {
     bit [MST_ID_W-1:0]      bid;
     bit [ATX_RESP_W-1:0]    bresp;
 } atx_b_info;
+typedef struct {
+    bit [MST_ID_W-1:0]      tid;
+    bit [SRC_TDEST_W-1:0]   tdest;
+    bit [ATX_SRC_DATA_W-1:0]tdata;
+    bit [ATX_SRC_BYTE_AMT-1:0] tkeep;
+    bit [ATX_SRC_BYTE_AMT-1:0] tstrb;
+    bit                     tlast;
+} atx_axis; // AXI-Stream type
 
 /****************** DMA ******************/ 
 typedef struct {
@@ -184,7 +195,7 @@ module axi_dma_tb;
     logic                           m_rready_o;
     // -- AXI-Stream
     logic   [MST_ID_W-1:0]          s_tid_i;    
-    logic                           s_tdest_i;  // Not-use
+    logic   [SRC_TDEST_W-1:0]       s_tdest_i;  // Not-use
     logic   [ATX_SRC_DATA_W-1:0]    s_tdata_i;
     logic   [ATX_SRC_BYTE_AMT-1:0]  s_tkeep_i;
     logic   [ATX_SRC_BYTE_AMT-1:0]  s_tstrb_i;
@@ -192,24 +203,34 @@ module axi_dma_tb;
     logic                           s_tvalid_i;
     logic                           s_tready_o;
 
-    // AXI4 Master Write (destination) port
-    // -- AW channel         
+    // Destination Interface
+    // -- AXI4
+    // -- -- AW channel         
     logic   [MST_ID_W-1:0]          m_awid_o;
     logic   [DST_ADDR_W-1:0]        m_awaddr_o;
     logic   [ATX_LEN_W-1:0]         m_awlen_o;
     logic   [1:0]                   m_awburst_o;
     logic                           m_awvalid_o;
     logic                           m_awready_i;
-    // -- W channel          
+    // -- -- W channel          
     logic   [ATX_DST_DATA_W-1:0]    m_wdata_o;
     logic                           m_wlast_o;
     logic                           m_wvalid_o;
     logic                           m_wready_i;
-    // -- B channel
+    // -- -- B channel
     logic   [MST_ID_W-1:0]          m_bid_i;
     logic   [ATX_RESP_W-1:0]        m_bresp_i;
     logic                           m_bvalid_i;
     logic                           m_bready_o;
+    // -- AXI-Stream
+    logic   [MST_ID_W-1:0]          m_tid_o;    
+    logic   [DST_TDEST_W-1:0]       m_tdest_o;
+    logic   [ATX_DST_DATA_W-1:0]    m_tdata_o;
+    logic   [ATX_DST_BYTE_AMT-1:0]  m_tkeep_o;
+    logic   [ATX_DST_BYTE_AMT-1:0]  m_tstrb_o;
+    logic                           m_tlast_o;
+    logic                           m_tvalid_o;
+    logic                           m_tready_i;
 
     // Interrupt
     logic                           irq         [0:DMA_CHN_NUM-1];
@@ -247,7 +268,9 @@ module axi_dma_tb;
         .S_DATA_W       (S_DATA_W),
         .S_ADDR_W       (S_ADDR_W),
         .SRC_ADDR_W     (SRC_ADDR_W),
+        .SRC_TDEST_W    (SRC_TDEST_W),
         .DST_ADDR_W     (DST_ADDR_W),
+        .DST_TDEST_W    (DST_TDEST_W),
         .MST_ID_W       (MST_ID_W),
         .ATX_LEN_W      (ATX_LEN_W),
         .ATX_SIZE_W     (ATX_SIZE_W),
@@ -782,6 +805,40 @@ module axi_dma_tb;
         #0.1;
         wait(m_rready_o == 1'b1); #0.1;
     endtask
+    task automatic m_axis_transfer (
+        input [MST_ID_W-1:0]        tid,
+        input [ATX_SRC_DATA_W-1:0]  tdata,
+        input [ATX_SRC_BYTE_AMT-1:0] tkeep,
+        input [ATX_SRC_BYTE_AMT-1:0] tstrb,
+        input                       tlast
+    );
+        aclk_cl;
+        s_tid_i     <= tid;
+        s_tdata_i   <= tdata;
+        s_tkeep_i   <= tkeep;
+        s_tstrb_i   <= tstrb;
+        s_tlast_i   <= tlast;
+        s_tvalid_i  <= 1'b1;
+        // Wait for handshaking
+        #0.1;
+        wait(s_tready_o == 1'b1); #0.1;
+    endtask
+    task automatic s_axis_receive(
+        output [MST_ID_W-1:0]        tid,
+        output [DST_TDEST_W-1:0]     tdest,
+        output [ATX_SRC_DATA_W-1:0]  tdata,
+        output [ATX_SRC_BYTE_AMT-1:0] tkeep,
+        output [ATX_SRC_BYTE_AMT-1:0] tstrb,
+        output                       tlast
+    );
+        wait(m_tvalid_o == 1'b1); #0.1;
+        tid     = m_tid_o;
+        tdest   = m_tdest_o;
+        tdata   = m_tdata_o;
+        tkeep   = m_tkeep_o;
+        tstrb   = m_tstrb_o;
+        tlast   = m_tlast_o;
+    endtask
     
     task automatic rand_stall_cycle(input int stall_max);
         int slave_stall_1cycle;
@@ -941,6 +998,55 @@ module axi_dma_tb;
                     end
                 end
             end 
+            begin   : SRC_AXIS
+            forever begin
+`ifdef IMG_STREAM_MODE
+                for(int i = 0; i < SRC_MEM_SIZE; i = i + 1) begin   // Scan all elements in Source Memory
+                    m_axis_transfer (
+                        .tid('h0),
+                        .tdata(src_mem[i]),
+                        .tkeep({ATX_SRC_BYTE_AMT{1'b1}}),
+                        .tstrb({ATX_SRC_BYTE_AMT{1'b1}}),
+                        .tlast(i == (SRC_MEM_SIZE-1))
+                    );
+                end
+`endif
+            end
+            end
+            begin   : DST_AXIS
+                atx_axis axis_temp;
+                int tdata_cnt_0 = 0;
+                int tdata_cnt_1 = 0;
+                forever begin
+                    m_tready_i = 1'b1;
+                    s_axis_receive(
+                        .tid(axis_temp.tid),
+                        .tdest(axis_temp.tdest),
+                        .tdata(axis_temp.tdata),
+                        .tkeep(axis_temp.tkeep),
+                        .tstrb(axis_temp.tstrb),
+                        .tlast(axis_temp.tlast)
+                    );
+`ifdef IMG_STREAM_MODE
+                    if(axis_temp.tdest == 2'b00) begin
+                        dst_mem_0[tdata_cnt_0] <= axis_temp.tdata;
+                        tdata_cnt_0++;
+                    end
+                    else if(axis_temp.tdest == 2'b01) begin
+                        dst_mem_1[tdata_cnt_1] <= axis_temp.tdata;
+                        tdata_cnt_1++;
+                    end
+                    else begin
+                        $display("[FAIL]: Destination - Wrong TDEST value %2b)", axis_temp.tdest);
+                    end
+`endif          
+                    // Handshake occurs
+                    aclk_cl;
+                    // Stall random
+                    m_tready_i = 1'b0;
+                    rand_stall_cycle(`RREADY_STALL_MAX);
+                end
+            end
         join_none
     endtask
 

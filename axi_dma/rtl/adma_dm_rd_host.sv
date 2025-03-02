@@ -5,6 +5,7 @@ module adma_dm_rd_host #(
     // SOURCE 
     parameter SRC_IF_TYPE       = "AXI4", // "AXI4" || "AXIS"
     parameter SRC_ADDR_W        = 32,
+    parameter SRC_TDEST_W       = 2,
     parameter ATX_SRC_DATA_W    = 256,
     // AXI Interface
     parameter MST_ID_W          = 5,
@@ -52,7 +53,7 @@ module adma_dm_rd_host #(
     output                          m_rready_o,
     // -- AXI-Stream
     input   [MST_ID_W-1:0]          s_tid_i,    
-    input                           s_tdest_i,  // Not-use
+    input   [SRC_TDEST_W-1:0]       s_tdest_i,
     input   [ATX_SRC_DATA_W-1:0]    s_tdata_i,
     input   [ATX_SRC_BYTE_AMT-1:0]  s_tkeep_i,
     input   [ATX_SRC_BYTE_AMT-1:0]  s_tstrb_i,
@@ -133,6 +134,7 @@ else if(SRC_IF_TYPE == "AXIS") begin : SRC_AXIS_GEN
     adma_dm_src_axis #(
         .DMA_CHN_NUM    (DMA_CHN_NUM),
         .ROB_EN         (ROB_EN),
+        .SRC_TDEST_W    (SRC_TDEST_W),
         .ATX_SRC_DATA_W (ATX_SRC_DATA_W),
         .ATX_SRC_BYTE_AMT(ATX_SRC_BYTE_AMT),
         .MST_ID_W       (MST_ID_W)

@@ -5,6 +5,7 @@ module adma_dm_wr_host #(
     // AXI Interface
     parameter DST_IF_TYPE       = "AXI4", // "AXI4" || "AXIS"
     parameter DST_ADDR_W        = 32,
+    parameter DST_TDEST_W       = 2,
     parameter MST_ID_W          = 5,
     parameter ATX_LEN_W         = 8,
     parameter ATX_SIZE_W        = 3,
@@ -52,8 +53,8 @@ module adma_dm_wr_host #(
     input                           m_bvalid_i,
     output                          m_bready_o,
     // -- AXI-Stream Master Interface
-    output  [MST_ID_W-1:0]          m_tid_o,    
-    output                          m_tdest_o,  // Not-use
+    output  [MST_ID_W-1:0]          m_tid_o,      
+    output  [DST_TDEST_W-1:0]       m_tdest_o,
     output  [ATX_DST_DATA_W-1:0]    m_tdata_o,
     output  [ATX_DST_BYTE_AMT-1:0]  m_tkeep_o,
     output  [ATX_DST_BYTE_AMT-1:0]  m_tstrb_o,
@@ -152,6 +153,7 @@ else if (DST_IF_TYPE == "AXIS") begin : DST_AXIS_GEN
         .DMA_CHN_NUM    (DMA_CHN_NUM),
         .MST_ID_W       (MST_ID_W),
         .ATX_LEN_W      (ATX_LEN_W),
+        .DST_TDEST_W    (DST_TDEST_W),
         .ATX_DST_DATA_W (ATX_DST_DATA_W),
         .ATX_DST_BYTE_AMT(ATX_DST_BYTE_AMT),
         .ATX_NUM_OSTD   (ATX_NUM_OSTD),
@@ -160,7 +162,8 @@ else if (DST_IF_TYPE == "AXIS") begin : DST_AXIS_GEN
         .aclk           (clk),
         .aresetn        (rst_n),
         .atx_chn_id     (atx_chn_id),
-        .atx_awlen      (atx_awlen),
+        .atx_tdest      (atx_awaddr[DST_TDEST_W-1:0]),  // Same function as awaddr -> Use lower bits
+        .atx_tlen       (atx_awlen),                    // Same function as awlen
         .atx_vld        (atx_vld),
         .atx_rdy        (atx_rdy),
         .atx_wdata      (atx_wdata),
