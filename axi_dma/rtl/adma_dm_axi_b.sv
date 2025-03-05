@@ -73,7 +73,7 @@ module adma_dm_axi_b #(
     );
     // -- Reorder Buffer
 generate
-if(ROB_EN == 1) begin : ROB_GEN
+if((ROB_EN == 1) && (DMA_CHN_NUM > 1)) begin : ROB_GEN
     reorder_buffer #(
         .FIX_ID         (0),
         .ORD_DEPTH      (ATX_NUM_OSTD),

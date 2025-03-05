@@ -1,19 +1,19 @@
 module axi_dma #(
     // DMA
     parameter DMA_BASE_ADDR     = 32'h8000_0000,
-    parameter DMA_CHN_NUM       = 1,    // Number of DMA channels
+    parameter DMA_CHN_NUM       = 2,    // Number of DMA channels
     parameter DMA_LENGTH_W      = 16,   // Maximum size of 1 transfer is (2^16 * 256) 
     parameter DMA_DESC_DEPTH    = 4,    // The maximum number of descriptors in each channel
     parameter DMA_CHN_ARB_W     = 3,    // Channel arbitration weight's width
     parameter ROB_EN            = 0,    // Reorder multiple AXI outstanding transactions enable
     parameter DESC_QUEUE_TYPE   = (DMA_DESC_DEPTH >= 16) ? "RAM-BASED" : "FLIPFLOP-BASED",
     // SOURCE 
-    parameter SRC_IF_TYPE       = "AXIS", // "AXI4" || "AXIS"
+    parameter SRC_IF_TYPE       = "AXI4", // "AXI4" || "AXIS"
     parameter SRC_ADDR_W        = 32,
     parameter SRC_TDEST_W       = 2,
     parameter ATX_SRC_DATA_W    = 256,
     // DESITNATION 
-    parameter DST_IF_TYPE       = "AXIS", // "AXI4" || "AXIS"
+    parameter DST_IF_TYPE       = "AXI4", // "AXI4" || "AXIS"
     parameter DST_ADDR_W        = 32,
     parameter DST_TDEST_W       = 2,
     parameter ATX_DST_DATA_W    = 256,
