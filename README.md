@@ -1,6 +1,7 @@
 # AXI DMA Controller
-
 *User manual document*
+
+_You can view the full documentation_ [_here_](https://surf-chips-077.notion.site/AXI-DMA-Controller-1941fdef702680e4a604c368934afc19)
 
 # Introduction
 
@@ -206,8 +207,7 @@ The top module file is `axi_dma.sv`
 | `ATX_RESP_W` | Width of AXI response field | 2 |
 | `ATX_SRC_BYTE_AMT` | Byte amount per transaction in source interface | `ATX_SRC_DATA_W/8` |
 | `ATX_DST_BYTE_AMT` | Byte amount per transaction in destination interface | `ATX_DST_DATA_W/8` |
-| `ATX_NUM_OSTD` | Number of outstanding transactions in AXI bus
-(*Minimum value must be 2)* | `DMA_NUM_CHN` |
+| `ATX_NUM_OSTD` | Number of outstanding transactions in AXI bus (*Minimum value must be 2)* | `DMA_NUM_CHN` |
 | `ATX_INTL_DEPTH` | Interleaving depth on the AXI interface | 16 |
 
 ## Configuration interface
@@ -563,7 +563,7 @@ Nothing
 
 # Update later
 
-- [ ]  **TODO:** Handle 4KB boundary crossing
+- [ ]  TODO: Handle 4KB boundary crossing
 - [ ]  TODO: `RAM-BASED` type for the Descriptor Queue module
 - [ ]  TODO: Scatter-Garther mode
 - [ ]  TODO: Build a automation test enviroment for directed test
