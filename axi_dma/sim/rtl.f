@@ -1,8 +1,9 @@
 ./../rtl/*.sv
-./../rtl/others/adapter/*.v
-./../rtl/others/arbiter/iwrr/*.v
-./../rtl/others/edgedet/*.v
-./../rtl/others/encoder/*.v
-./../rtl/others/fifo/*.v
-./../rtl/others/splitter/*.v
-./../rtl/others/reorder/*.sv
+./../rtl/common/adapter/axi/*.v
+./../rtl/common/arbiter/iwrr/*.v
+./../rtl/common/edgedet/*.v
+./../rtl/common/encoder/onehot_encoder/*.v
+./../rtl/common/fifo/sync_fifo/*.v
+./../rtl/common/skid_buffer/*.v
+./../rtl/common/reorder_buffer/*.sv
+./../rtl/common/splitter/*.v
