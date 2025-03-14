@@ -121,8 +121,8 @@ module axi_dma #(
     output                          m_tvalid_o,
     input                           m_tready_i,
     // Interrupt
-    output                          irq         [0:DMA_CHN_NUM-1],  // Caused by TX Queueing, TX Completion
-    output                          trap        [0:DMA_CHN_NUM-1]   // Caused by Wrong address mapping
+    output  [DMA_CHN_NUM-1:0]       irq,    // Caused by TX Queueing, TX Completion
+    output  [DMA_CHN_NUM-1:0]       trap    // Caused by Wrong address mapping
 );
     // Local parameters
     localparam DMA_XFER_ID_W        = $clog2(DMA_DESC_DEPTH);
