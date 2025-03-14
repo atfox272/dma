@@ -28,7 +28,7 @@
 `define WREADY_STALL_MAX    0
 `define BREADY_STALL_MAX    0
 
-parameter SRC_IF_TYPE       = "AXIS"; // "AXI4" || "AXIS"
+parameter SRC_IF_TYPE       = "AXI4"; // "AXI4" || "AXIS"
 parameter DST_IF_TYPE       = "AXI4"; // "AXI4" || "AXIS"
 
 `define END_TIME            100000
@@ -233,8 +233,8 @@ module axi_dma_tb;
     logic                           m_tready_i;
 
     // Interrupt
-    logic                           irq         [0:DMA_CHN_NUM-1];
-    logic                           trap        [0:DMA_CHN_NUM-1];
+    logic   [DMA_CHN_NUM-1:0]       irq;
+    logic   [DMA_CHN_NUM-1:0]       trap;
 
     // Source Memory
     logic [ATX_SRC_DATA_W-1:0]      src_mem     [0:SRC_MEM_SIZE-1];

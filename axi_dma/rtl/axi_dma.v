@@ -121,8 +121,8 @@ module axi_dma #(
     output                          m_tvalid_o,
     input                           m_tready_i,
     // Interrupt
-    output                          irq         [0:DMA_CHN_NUM-1],  // Caused by TX Queueing, TX Completion
-    output                          trap        [0:DMA_CHN_NUM-1]   // Caused by Wrong address mapping
+    output  [DMA_CHN_NUM-1:0]       irq,  // Caused by TX Queueing, TX Completion
+    output  [DMA_CHN_NUM-1:0]       trap   // Caused by Wrong address mapping
 );
     // Local parameters
     localparam DMA_XFER_ID_W        = $clog2(DMA_DESC_DEPTH);
@@ -134,69 +134,69 @@ module axi_dma #(
     // -- DMA CSRs
     wire                            dma_en;
     // -- Channel CSR
-    wire                            chn_ctrl_en         [0:DMA_CHN_NUM-1];
-    wire                            chn_xfer_2d         [0:DMA_CHN_NUM-1];
-    wire                            chn_xfer_cyclic     [0:DMA_CHN_NUM-1];
-    wire                            chn_irq_msk_irq_com [0:DMA_CHN_NUM-1];
-    wire                            chn_irq_msk_irq_qed [0:DMA_CHN_NUM-1];
-    wire                            chn_irq_src_irq_com [0:DMA_CHN_NUM-1];
-    wire                            chn_irq_src_irq_qed [0:DMA_CHN_NUM-1];
-    wire    [DMA_CHN_ARB_W-1:0]     chn_arb_rate        [0:DMA_CHN_NUM-1];
+    wire    [DMA_CHN_NUM-1:0]                   chn_ctrl_en;
+    wire    [DMA_CHN_NUM-1:0]                   chn_xfer_2d;
+    wire    [DMA_CHN_NUM-1:0]                   chn_xfer_cyclic;
+    wire    [DMA_CHN_NUM-1:0]                   chn_irq_msk_irq_com;
+    wire    [DMA_CHN_NUM-1:0]                   chn_irq_msk_irq_qed;
+    wire    [DMA_CHN_NUM-1:0]                   chn_irq_src_irq_com;
+    wire    [DMA_CHN_NUM-1:0]                   chn_irq_src_irq_qed;
+    wire    [DMA_CHN_NUM*DMA_CHN_ARB_W-1:0]     chn_arb_rate;
     // -- AXI4 Transaction CSR
-    wire    [MST_ID_W-1:0]          atx_id              [0:DMA_CHN_NUM-1];
-    wire    [1:0]                   atx_src_burst       [0:DMA_CHN_NUM-1];
-    wire    [1:0]                   atx_dst_burst       [0:DMA_CHN_NUM-1];
-    wire    [DMA_LENGTH_W-1:0]      atx_wd_per_burst    [0:DMA_CHN_NUM-1];
+    wire    [DMA_CHN_NUM*MST_ID_W-1:0]          atx_id;
+    wire    [DMA_CHN_NUM*2-1:0]                 atx_src_burst;
+    wire    [DMA_CHN_NUM*2-1:0]                 atx_dst_burst;
+    wire    [DMA_CHN_NUM*DMA_LENGTH_W-1:0]      atx_wd_per_burst;
     // -- DMA Transfer CSR
-    wire    [DMA_XFER_ID_W-1:0]     xfer_id             [0:DMA_CHN_NUM-1];
-    wire    [DMA_DESC_DEPTH-1:0]    xfer_done           [0:DMA_CHN_NUM-1];
-    wire    [DMA_XFER_ID_W-1:0]     active_xfer_id      [0:DMA_CHN_NUM-1];
-    wire    [DMA_LENGTH_W-1:0]      active_xfer_len     [0:DMA_CHN_NUM-1];
+    wire    [DMA_CHN_NUM*DMA_XFER_ID_W-1:0]     xfer_id;
+    wire    [DMA_CHN_NUM*DMA_DESC_DEPTH-1:0]    xfer_done;
+    wire    [DMA_CHN_NUM*DMA_XFER_ID_W-1:0]     active_xfer_id;
+    wire    [DMA_CHN_NUM*DMA_LENGTH_W-1:0]      active_xfer_len;
     // Registers Map -> Descriptor Queue
-    wire                            desc_wr_vld         [0:DMA_CHN_NUM-1];
-    wire                            desc_wr_rdy         [0:DMA_CHN_NUM-1];
-    wire    [SRC_ADDR_W-1:0]        desc_wr_src_addr    [0:DMA_CHN_NUM-1];
-    wire    [DST_ADDR_W-1:0]        desc_wr_dst_addr    [0:DMA_CHN_NUM-1];
-    wire    [DMA_LENGTH_W-1:0]      desc_wr_xlen        [0:DMA_CHN_NUM-1];
-    wire    [DMA_LENGTH_W-1:0]      desc_wr_ylen        [0:DMA_CHN_NUM-1];
-    wire    [DMA_LENGTH_W-1:0]      desc_wr_src_strd    [0:DMA_CHN_NUM-1];
-    wire    [DMA_LENGTH_W-1:0]      desc_wr_dst_strd    [0:DMA_CHN_NUM-1];
+    wire    [DMA_CHN_NUM-1:0]                   desc_wr_vld;
+    wire    [DMA_CHN_NUM-1:0]                   desc_wr_rdy;
+    wire    [DMA_CHN_NUM*SRC_ADDR_W-1:0]        desc_wr_src_addr;
+    wire    [DMA_CHN_NUM*DST_ADDR_W-1:0]        desc_wr_dst_addr;
+    wire    [DMA_CHN_NUM*DMA_LENGTH_W-1:0]      desc_wr_xlen;
+    wire    [DMA_CHN_NUM*DMA_LENGTH_W-1:0]      desc_wr_ylen;
+    wire    [DMA_CHN_NUM*DMA_LENGTH_W-1:0]      desc_wr_src_strd;
+    wire    [DMA_CHN_NUM*DMA_LENGTH_W-1:0]      desc_wr_dst_strd;
     // Descriptor Queue -> Channel Management
-    wire                            desc_rd_vld         [0:DMA_CHN_NUM-1];
-    wire                            desc_rd_rdy         [0:DMA_CHN_NUM-1];
-    wire    [DMA_XFER_ID_W-1:0]     desc_rd_xfer_id     [0:DMA_CHN_NUM-1];
-    wire    [SRC_ADDR_W-1:0]        desc_rd_src_addr    [0:DMA_CHN_NUM-1];
-    wire    [DST_ADDR_W-1:0]        desc_rd_dst_addr    [0:DMA_CHN_NUM-1];
-    wire    [DMA_LENGTH_W-1:0]      desc_rd_xlen        [0:DMA_CHN_NUM-1];
-    wire    [DMA_LENGTH_W-1:0]      desc_rd_ylen        [0:DMA_CHN_NUM-1];
-    wire    [DMA_LENGTH_W-1:0]      desc_rd_src_strd    [0:DMA_CHN_NUM-1];
-    wire    [DMA_LENGTH_W-1:0]      desc_rd_dst_strd    [0:DMA_CHN_NUM-1];
-    wire    [DMA_DESC_DEPTH-1:0]    xfer_done_clear     [0:DMA_CHN_NUM-1];
+    wire    [DMA_CHN_NUM-1:0]                   desc_rd_vld;
+    wire    [DMA_CHN_NUM-1:0]                   desc_rd_rdy;
+    wire    [DMA_CHN_NUM*DMA_XFER_ID_W-1:0]     desc_rd_xfer_id;
+    wire    [DMA_CHN_NUM*SRC_ADDR_W-1:0]        desc_rd_src_addr;
+    wire    [DMA_CHN_NUM*DST_ADDR_W-1:0]        desc_rd_dst_addr;
+    wire    [DMA_CHN_NUM*DMA_LENGTH_W-1:0]      desc_rd_xlen;
+    wire    [DMA_CHN_NUM*DMA_LENGTH_W-1:0]      desc_rd_ylen;
+    wire    [DMA_CHN_NUM*DMA_LENGTH_W-1:0]      desc_rd_src_strd;
+    wire    [DMA_CHN_NUM*DMA_LENGTH_W-1:0]      desc_rd_dst_strd;
+    wire    [DMA_CHN_NUM*DMA_DESC_DEPTH-1:0]    xfer_done_clear;
     // Channel Management -> AXI Transaction Scheduler
-    wire    [SRC_ADDR_W-1:0]        tx_src_addr         [0:DMA_CHN_NUM-1];
-    wire    [DST_ADDR_W-1:0]        tx_dst_addr         [0:DMA_CHN_NUM-1];
-    wire    [DMA_LENGTH_W-1:0]      tx_len              [0:DMA_CHN_NUM-1];
-    wire                            tx_vld              [0:DMA_CHN_NUM-1];
-    wire                            tx_rdy              [0:DMA_CHN_NUM-1];
-    wire                            tx_done             [0:DMA_CHN_NUM-1];
+    wire    [DMA_CHN_NUM*SRC_ADDR_W-1:0]        tx_src_addr;
+    wire    [DMA_CHN_NUM*DST_ADDR_W-1:0]        tx_dst_addr;
+    wire    [DMA_CHN_NUM*DMA_LENGTH_W-1:0]      tx_len;
+    wire    [DMA_CHN_NUM-1:0]                   tx_vld;
+    wire    [DMA_CHN_NUM-1:0]                   tx_rdy;
+    wire    [DMA_CHN_NUM-1:0]                   tx_done;
     // AXI Transaction Scheduler -> Data Mover
-    wire    [DMA_CHN_NUM_W-1:0]     atx_chn_id;
-    wire    [MST_ID_W-1:0]          atx_arid;
-    wire    [SRC_ADDR_W-1:0]        atx_araddr;
-    wire    [ATX_LEN_W-1:0]         atx_arlen;
-    wire    [1:0]                   atx_arburst;
-    wire    [MST_ID_W-1:0]          atx_awid;
-    wire    [DST_ADDR_W-1:0]        atx_awaddr;
-    wire    [ATX_LEN_W-1:0]         atx_awlen;
-    wire    [1:0]                   atx_awburst;
-    wire                            atx_vld;
-    wire                            atx_rdy;
-    wire                            atx_done            [0:DMA_CHN_NUM-1];
+    wire    [DMA_CHN_NUM_W-1:0]                 atx_chn_id;
+    wire    [MST_ID_W-1:0]                      atx_arid;
+    wire    [SRC_ADDR_W-1:0]                    atx_araddr;
+    wire    [ATX_LEN_W-1:0]                     atx_arlen;
+    wire    [1:0]                               atx_arburst;
+    wire    [MST_ID_W-1:0]                      atx_awid;
+    wire    [DST_ADDR_W-1:0]                    atx_awaddr;
+    wire    [ATX_LEN_W-1:0]                     atx_awlen;
+    wire    [1:0]                               atx_awburst;
+    wire                                        atx_vld;
+    wire                                        atx_rdy;
+    wire    [DMA_CHN_NUM-1:0]                   atx_done;
     // Interrupt request
-    wire                            irq_qed             [0:DMA_CHN_NUM-1];
-    wire                            irq_com             [0:DMA_CHN_NUM-1];
-    wire                            trap_atx_src_err    [0:DMA_CHN_NUM-1];
-    wire                            trap_atx_dst_err    [0:DMA_CHN_NUM-1];
+    wire    [DMA_CHN_NUM-1:0]                   irq_qed;
+    wire    [DMA_CHN_NUM-1:0]                   irq_com;
+    wire    [DMA_CHN_NUM-1:0]                   trap_atx_src_err;
+    wire    [DMA_CHN_NUM-1:0]                   trap_atx_dst_err;
     // Module instantiation
     // -- Register Map
     adma_reg_map #(

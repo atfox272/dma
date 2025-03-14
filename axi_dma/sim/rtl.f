@@ -1,4 +1,4 @@
-./../rtl/*.sv
+./../rtl/*.v
 ./../rtl/common/adapter/axi/*.v
 ./../rtl/common/arbiter/iwrr/*.v
 ./../rtl/common/edgedet/*.v
