@@ -22,11 +22,11 @@ module adma_dm_axi_r #(
     input                           atx_vld,
     output                          atx_rdy,
     // AXI Transaction control
-    output  [ATX_SRC_DATA_W-1:0]    atx_rdata,
-    output                          atx_rdata_vld,
-    input                           atx_rdata_rdy,
-    input   [MST_ID_W-1:0]          atx_id      [0:DMA_CHN_NUM-1],
-    output                          atx_src_err [0:DMA_CHN_NUM-1],
+    output  [ATX_SRC_DATA_W-1:0]        atx_rdata,
+    output                              atx_rdata_vld,
+    input                               atx_rdata_rdy,
+    input   [DMA_CHN_NUM*MST_ID_W-1:0]  atx_id,
+    output  [DMA_CHN_NUM-1:0]           atx_src_err,
     // -- R channel  
     input   [MST_ID_W-1:0]          m_rid_i,
     input   [ATX_SRC_DATA_W-1:0]    m_rdata_i,

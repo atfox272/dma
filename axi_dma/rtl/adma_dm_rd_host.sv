@@ -29,11 +29,11 @@ module adma_dm_rd_host #(
     input                           atx_vld,
     output                          atx_rdy,
     // AXI Transaction control
-    output  [ATX_SRC_DATA_W-1:0]    atx_rdata,
-    output                          atx_rdata_vld,
-    input                           atx_rdata_rdy,
-    input   [MST_ID_W-1:0]          atx_id      [0:DMA_CHN_NUM-1],
-    output                          atx_src_err [0:DMA_CHN_NUM-1],
+    output  [ATX_SRC_DATA_W-1:0]        atx_rdata,
+    output                              atx_rdata_vld,
+    input                               atx_rdata_rdy,
+    input   [DMA_CHN_NUM*MST_ID_W-1:0]  atx_id,
+    output  [DMA_CHN_NUM-1:0]           atx_src_err,
     
     // Source port
     // -- AXI4

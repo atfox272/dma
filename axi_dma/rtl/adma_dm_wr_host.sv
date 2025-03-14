@@ -31,9 +31,9 @@ module adma_dm_wr_host #(
     input   [ATX_DST_DATA_W-1:0]    atx_wdata,
     input                           atx_wdata_vld,
     output                          atx_wdata_rdy,
-    input   [MST_ID_W-1:0]          atx_id      [0:DMA_CHN_NUM-1],
-    output                          atx_dst_err [0:DMA_CHN_NUM-1],
-    output                          atx_done    [0:DMA_CHN_NUM-1],
+    input   [DMA_CHN_NUM*MST_ID_W-1:0]  atx_id,
+    output  [DMA_CHN_NUM-1:0]           atx_done,
+    output  [DMA_CHN_NUM-1:0]           atx_dst_err,
     // AXI Master interface
     // -- AW channel         
     output  [MST_ID_W-1:0]          m_awid_o,

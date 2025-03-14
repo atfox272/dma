@@ -17,37 +17,37 @@ module adma_desc_queue
     // Do not modify
     parameter DMA_XFER_ID_W     = $clog2(DMA_DESC_DEPTH)
 ) (
-    input                       clk,
-    input                       rst_n,
-    input                       queue_en_glb_i,
-    input                       queue_en_i          [0:DMA_CHN_NUM-1], // Queue enable signal (DMA_enable & CHN_enable)
+    input                                   clk,
+    input                                   rst_n,
+    input                                   queue_en_glb_i,
+    input   [DMA_CHN_NUM-1:0]               queue_en_i, // Queue enable signal (DMA_enable & CHN_enable)
     // To Registers Map
-    input   [SRC_ADDR_W-1:0]    src_addr_i          [0:DMA_CHN_NUM-1],
-    input   [DST_ADDR_W-1:0]    dst_addr_i          [0:DMA_CHN_NUM-1],
-    input   [DMA_LENGTH_W-1:0]  xfer_xlen_i         [0:DMA_CHN_NUM-1],
-    input   [DMA_LENGTH_W-1:0]  xfer_ylen_i         [0:DMA_CHN_NUM-1],
-    input   [DMA_LENGTH_W-1:0]  src_stride_i        [0:DMA_CHN_NUM-1],
-    input   [DMA_LENGTH_W-1:0]  dst_stride_i        [0:DMA_CHN_NUM-1],
-    input                       desc_wr_vld_i       [0:DMA_CHN_NUM-1],
-    output                      desc_wr_rdy_o       [0:DMA_CHN_NUM-1],
+    input   [DMA_CHN_NUM*SRC_ADDR_W-1:0]    src_addr_i,
+    input   [DMA_CHN_NUM*DST_ADDR_W-1:0]    dst_addr_i,
+    input   [DMA_CHN_NUM*DMA_LENGTH_W-1:0]  xfer_xlen_i,
+    input   [DMA_CHN_NUM*DMA_LENGTH_W-1:0]  xfer_ylen_i,
+    input   [DMA_CHN_NUM*DMA_LENGTH_W-1:0]  src_stride_i,
+    input   [DMA_CHN_NUM*DMA_LENGTH_W-1:0]  dst_stride_i,
+    input   [DMA_CHN_NUM-1:0]               desc_wr_vld_i,
+    output  [DMA_CHN_NUM-1:0]               desc_wr_rdy_o,
     // To Channel Management
-    output  [DMA_XFER_ID_W-1:0] xfer_id_o           [0:DMA_CHN_NUM-1],
-    output  [SRC_ADDR_W-1:0]    src_addr_o          [0:DMA_CHN_NUM-1],
-    output  [DST_ADDR_W-1:0]    dst_addr_o          [0:DMA_CHN_NUM-1],
-    output  [DMA_LENGTH_W-1:0]  xfer_xlen_o         [0:DMA_CHN_NUM-1],
-    output  [DMA_LENGTH_W-1:0]  xfer_ylen_o         [0:DMA_CHN_NUM-1],
-    output  [DMA_LENGTH_W-1:0]  src_stride_o        [0:DMA_CHN_NUM-1],
-    output  [DMA_LENGTH_W-1:0]  dst_stride_o        [0:DMA_CHN_NUM-1],
-    input                       desc_rd_vld_i       [0:DMA_CHN_NUM-1],
-    output                      desc_rd_rdy_o       [0:DMA_CHN_NUM-1],
+    output  [DMA_CHN_NUM*DMA_XFER_ID_W-1:0] xfer_id_o,
+    output  [DMA_CHN_NUM*SRC_ADDR_W-1:0]    src_addr_o,
+    output  [DMA_CHN_NUM*DST_ADDR_W-1:0]    dst_addr_o,
+    output  [DMA_CHN_NUM*DMA_LENGTH_W-1:0]  xfer_xlen_o,
+    output  [DMA_CHN_NUM*DMA_LENGTH_W-1:0]  xfer_ylen_o,
+    output  [DMA_CHN_NUM*DMA_LENGTH_W-1:0]  src_stride_o,
+    output  [DMA_CHN_NUM*DMA_LENGTH_W-1:0]  dst_stride_o,
+    input   [DMA_CHN_NUM-1:0]               desc_rd_vld_i,
+    output  [DMA_CHN_NUM-1:0]               desc_rd_rdy_o,
     // Transfer control
-    output  [DMA_DESC_DEPTH-1:0]xfer_done_clear     [0:DMA_CHN_NUM-1],
+    output  [DMA_CHN_NUM*DMA_DESC_DEPTH-1:0]xfer_done_clear,
     // Channel CSR
-    input                       chn_irq_msk_irq_qed [0:DMA_CHN_NUM-1],
-    output                      chn_irq_src_irq_qed [0:DMA_CHN_NUM-1],  // Status
-    output  [DMA_XFER_ID_W-1:0] nxt_xfer_id         [0:DMA_CHN_NUM-1],
+    input   [DMA_CHN_NUM-1:0]               chn_irq_msk_irq_qed,
+    output  [DMA_CHN_NUM-1:0]               chn_irq_src_irq_qed,  // Status
+    output  [DMA_CHN_NUM*DMA_XFER_ID_W-1:0] nxt_xfer_id,
     // Interrupt reuqest control
-    output                      irq_qed             [0:DMA_CHN_NUM-1]
+    output  [DMA_CHN_NUM-1:0]               irq_qed
 );
     // Local parameters
     localparam DESC_INFO_W      = DMA_XFER_ID_W + SRC_ADDR_W + DST_ADDR_W + DMA_LENGTH_W + DMA_LENGTH_W + DMA_LENGTH_W + DMA_LENGTH_W; // transfer_id + src_addr + dest_addr + x_len + y_len + src_stride + dest_stride 
@@ -79,9 +79,9 @@ for(chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : DESC_QUEU
     assign desc_wr_vld[chn_idx]     = queue_en_glb_i & queue_en_i[chn_idx] & desc_wr_vld_i[chn_idx];
     assign desc_wr_rdy_o[chn_idx]   = queue_en_glb_i & queue_en_i[chn_idx] & desc_wr_rdy[chn_idx];
     assign desc_wr_hsk[chn_idx]     = desc_wr_rdy_o[chn_idx] & desc_wr_vld[chn_idx];
-    assign xfer_done_clear[chn_idx] = desc_wr_hsk[chn_idx]; // Assert 1 cycle only
     assign xfer_qed[chn_idx]        = desc_wr_hsk[chn_idx];
-    assign nxt_xfer_id[chn_idx]     = xfer_id_cnt[chn_idx]; 
+    assign nxt_xfer_id[(chn_idx+1)*DMA_XFER_ID_W-1-:DMA_XFER_ID_W]       = xfer_id_cnt[chn_idx]; 
+    assign xfer_done_clear[(chn_idx+1)*DMA_DESC_DEPTH-1-:DMA_DESC_DEPTH] = desc_wr_hsk[chn_idx]; // Assert 1 cycle only
     always @(posedge clk or negedge rst_n) begin
         if(~rst_n) begin
             xfer_id_cnt[chn_idx] <= {DMA_XFER_ID_W{1'b0}};
@@ -104,8 +104,8 @@ if(DESC_QUEUE_TYPE == "FLIPFLOP-BASED") begin : FF_BASED
             .FIFO_DEPTH     (DMA_DESC_DEPTH)
         ) desc_queue (
             .clk            (clk),
-            .data_i         ({xfer_id_cnt[chn_idx], src_addr_i[chn_idx], dst_addr_i[chn_idx], xfer_xlen_i[chn_idx], xfer_ylen_i[chn_idx], src_stride_i[chn_idx], dst_stride_i[chn_idx]}),
-            .data_o         ({xfer_id_o[chn_idx],   src_addr_o[chn_idx], dst_addr_o[chn_idx], xfer_xlen_o[chn_idx], xfer_ylen_o[chn_idx], src_stride_o[chn_idx], dst_stride_o[chn_idx]}),
+            .data_i         ({xfer_id_cnt[chn_idx],                                     src_addr_i[(chn_idx+1)*SRC_ADDR_W-1-:SRC_ADDR_W], dst_addr_i[(chn_idx+1)*DST_ADDR_W-1-:DST_ADDR_W], xfer_xlen_i[(chn_idx+1)*DMA_LENGTH_W-1-:DMA_LENGTH_W], xfer_ylen_i[(chn_idx+1)*DMA_LENGTH_W-1-:DMA_LENGTH_W], src_stride_i[(chn_idx+1)*DMA_LENGTH_W-1-:DMA_LENGTH_W], dst_stride_i[(chn_idx+1)*DMA_LENGTH_W-1-:DMA_LENGTH_W]}),
+            .data_o         ({xfer_id_o[(chn_idx+1)*DMA_XFER_ID_W-1-:DMA_XFER_ID_W],    src_addr_o[(chn_idx+1)*SRC_ADDR_W-1-:SRC_ADDR_W], dst_addr_o[(chn_idx+1)*DST_ADDR_W-1-:DST_ADDR_W], xfer_xlen_o[(chn_idx+1)*DMA_LENGTH_W-1-:DMA_LENGTH_W], xfer_ylen_o[(chn_idx+1)*DMA_LENGTH_W-1-:DMA_LENGTH_W], src_stride_o[(chn_idx+1)*DMA_LENGTH_W-1-:DMA_LENGTH_W], dst_stride_o[(chn_idx+1)*DMA_LENGTH_W-1-:DMA_LENGTH_W]}),
             .wr_valid_i     (desc_wr_vld[chn_idx]),
             .rd_valid_i     (desc_rd_vld_i[chn_idx]),
             .empty_o        (), 

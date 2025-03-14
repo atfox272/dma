@@ -19,9 +19,9 @@ module adma_dm_axi_b #(
     input                           atx_vld,
     output                          atx_rdy,
     // AXI Transaction control
-    input   [MST_ID_W-1:0]          atx_id      [0:DMA_CHN_NUM-1],
-    output                          atx_dst_err [0:DMA_CHN_NUM-1],
-    output                          atx_done    [0:DMA_CHN_NUM-1],
+    input   [DMA_CHN_NUM*MST_ID_W-1:0]  atx_id,
+    output  [DMA_CHN_NUM-1:0]           atx_done,
+    output  [DMA_CHN_NUM-1:0]           atx_dst_err,
     // AXI Master interface
     // -- B channel
     input   [MST_ID_W-1:0]          m_bid_i,

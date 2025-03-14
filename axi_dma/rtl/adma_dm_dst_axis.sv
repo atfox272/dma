@@ -20,12 +20,12 @@ module adma_dm_dst_axis #(
     input                           atx_vld,
     output                          atx_rdy,
     // AXI Transaction data
-    input   [ATX_DST_DATA_W-1:0]    atx_wdata,
-    input                           atx_wdata_vld,
-    output                          atx_wdata_rdy,
-    input   [MST_ID_W-1:0]          atx_id      [0:DMA_CHN_NUM-1],
-    output                          atx_done    [0:DMA_CHN_NUM-1],
-    output                          atx_dst_err [0:DMA_CHN_NUM-1],
+    input   [ATX_DST_DATA_W-1:0]        atx_wdata,
+    input                               atx_wdata_vld,
+    output                              atx_wdata_rdy,
+    input   [DMA_CHN_NUM*MST_ID_W-1:0]  atx_id,
+    output  [DMA_CHN_NUM-1:0]           atx_done,
+    output  [DMA_CHN_NUM-1:0]           atx_dst_err,
     // -- AXI-Stream Master Interface
     output  [MST_ID_W-1:0]          m_tid_o,      
     output  [DST_TDEST_W-1:0]       m_tdest_o,
@@ -54,6 +54,8 @@ module adma_dm_dst_axis #(
     wire   [ATX_LEN_W-1:0]          cur_tlen;
     wire   [DST_TDEST_W-1:0]        cur_tdest;
     wire                            cur_atx_vld;
+    
+    wire    [MST_ID_W-1:0]          atx_id_pck  [0:DMA_CHN_NUM-1];
 
     reg     [ATX_LEN_W-1:0]         tdata_cnt;
     // Module instantiation
@@ -92,7 +94,7 @@ module adma_dm_dst_axis #(
         .rst_n          (aresetn)
     );
     // Combinational logic
-    assign m_tid         = atx_id[cur_chn_id];
+    assign m_tid         = atx_id_pck[cur_chn_id];
     assign m_tdest       = cur_tdest;
     assign m_tdata       = atx_wdata;
     assign m_tlast       = ~|(tdata_cnt^cur_tlen);
@@ -103,6 +105,7 @@ module adma_dm_dst_axis #(
     assign m_axis_hsk    = m_tvalid & m_tready;
 generate
 for (chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : gen_atx_signals
+    assign atx_id_pck[chn_idx]  = atx_id[(chn_idx+1)*MST_ID_W-1-:MST_ID_W];
     assign atx_done[chn_idx]    = (cur_chn_id == chn_idx) & (m_tlast & m_axis_hsk);
     assign atx_dst_err[chn_idx] = 1'b0;
 end

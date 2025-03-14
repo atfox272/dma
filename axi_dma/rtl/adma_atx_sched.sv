@@ -17,20 +17,20 @@ module adma_atx_sched
     input                       clk,
     input                       rst_n,
     // Transaction information
-    input   [SRC_ADDR_W-1:0]    tx_src_addr         [0:DMA_CHN_NUM-1],
-    input   [DST_ADDR_W-1:0]    tx_dst_addr         [0:DMA_CHN_NUM-1],
-    input   [DMA_LENGTH_W-1:0]  tx_len              [0:DMA_CHN_NUM-1],
-    input                       tx_vld              [0:DMA_CHN_NUM-1],
-    output                      tx_rdy              [0:DMA_CHN_NUM-1],
+    input   [DMA_CHN_NUM*SRC_ADDR_W-1:0]    tx_src_addr,
+    input   [DMA_CHN_NUM*DST_ADDR_W-1:0]    tx_dst_addr,
+    input   [DMA_CHN_NUM*DMA_LENGTH_W-1:0]  tx_len,
+    input   [DMA_CHN_NUM-1:0]               tx_vld,
+    output  [DMA_CHN_NUM-1:0]               tx_rdy,
     // Transaction control
-    output                      tx_done             [0:DMA_CHN_NUM-1],
+    output  [DMA_CHN_NUM-1:0]               tx_done,
     // AXI Transaction CSR
-    input   [MST_ID_W-1:0]      atx_id              [0:DMA_CHN_NUM-1],
-    input   [1:0]               atx_src_burst       [0:DMA_CHN_NUM-1],
-    input   [1:0]               atx_dst_burst       [0:DMA_CHN_NUM-1],
-    input   [DMA_LENGTH_W-1:0]  atx_wd_per_burst    [0:DMA_CHN_NUM-1],
+    input   [DMA_CHN_NUM*MST_ID_W-1:0]      atx_id,
+    input   [DMA_CHN_NUM*2-1:0]             atx_src_burst,
+    input   [DMA_CHN_NUM*2-1:0]             atx_dst_burst,
+    input   [DMA_CHN_NUM*DMA_LENGTH_W-1:0]  atx_wd_per_burst,
     // Channel CSR
-    input   [DMA_CHN_ARB_W-1:0] chn_arb_rate        [0:DMA_CHN_NUM-1],
+    input   [DMA_CHN_NUM*DMA_CHN_ARB_W-1:0] chn_arb_rate,
     // AXI Transaction information
     output  [DMA_CHN_NUM_W-1:0] atx_chn_id,
     output  [MST_ID_W-1:0]      atx_arid,
@@ -44,21 +44,21 @@ module adma_atx_sched
     output                      atx_vld,
     input                       atx_rdy,
     // AXI Transaction control
-    input                       atx_done            [0:DMA_CHN_NUM-1]
+    input   [DMA_CHN_NUM-1:0]   atx_done
 );
     // Internal variables
     genvar chn_idx;
     // Internal signal
-    wire    [MST_ID_W-1:0]      req_arid    [0:DMA_CHN_NUM-1];
-    wire    [SRC_ADDR_W-1:0]    req_araddr  [0:DMA_CHN_NUM-1];
-    wire    [ATX_LEN_W-1:0]     req_arlen   [0:DMA_CHN_NUM-1];
-    wire    [1:0]               req_arburst [0:DMA_CHN_NUM-1];
-    wire    [MST_ID_W-1:0]      req_awid    [0:DMA_CHN_NUM-1];
-    wire    [DST_ADDR_W-1:0]    req_awaddr  [0:DMA_CHN_NUM-1];
-    wire    [ATX_LEN_W-1:0]     req_awlen   [0:DMA_CHN_NUM-1];
-    wire    [1:0]               req_awburst [0:DMA_CHN_NUM-1];
-    wire                        req_atx_vld [0:DMA_CHN_NUM-1];
-    wire                        req_atx_rdy [0:DMA_CHN_NUM-1];
+    wire    [DMA_CHN_NUM*MST_ID_W-1:0]      req_arid;
+    wire    [DMA_CHN_NUM*SRC_ADDR_W-1:0]    req_araddr;
+    wire    [DMA_CHN_NUM*ATX_LEN_W-1:0]     req_arlen;
+    wire    [DMA_CHN_NUM*2-1:0]             req_arburst;
+    wire    [DMA_CHN_NUM*MST_ID_W-1:0]      req_awid;
+    wire    [DMA_CHN_NUM*DST_ADDR_W-1:0]    req_awaddr;
+    wire    [DMA_CHN_NUM*ATX_LEN_W-1:0]     req_awlen;
+    wire    [DMA_CHN_NUM*2-1:0]             req_awburst;
+    wire    [DMA_CHN_NUM-1:0]               req_atx_vld;
+    wire    [DMA_CHN_NUM-1:0]               req_atx_rdy;
 
     // Module instantiation
 generate
@@ -76,24 +76,24 @@ for(chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : CHN_UNIT_
     ) af (
         .clk            (clk),
         .rst_n          (rst_n),
-        .tx_src_addr    (tx_src_addr[chn_idx]),
-        .tx_dst_addr    (tx_dst_addr[chn_idx]),
-        .tx_len         (tx_len[chn_idx]),
+        .tx_src_addr    (tx_src_addr[(chn_idx+1)*SRC_ADDR_W-1-:SRC_ADDR_W]),
+        .tx_dst_addr    (tx_dst_addr[(chn_idx+1)*DST_ADDR_W-1-:DST_ADDR_W]),
+        .tx_len         (tx_len[(chn_idx+1)*DMA_LENGTH_W-1-:DMA_LENGTH_W]),
         .tx_vld         (tx_vld[chn_idx]),
         .tx_rdy         (tx_rdy[chn_idx]),
         .tx_done        (tx_done[chn_idx]),
-        .atx_id         (atx_id[chn_idx]),
-        .atx_src_burst  (atx_src_burst[chn_idx]),
-        .atx_dst_burst  (atx_dst_burst[chn_idx]),
-        .atx_wd_per_burst(atx_wd_per_burst[chn_idx]),
-        .arid           (req_arid[chn_idx]),
-        .araddr         (req_araddr[chn_idx]),
-        .arlen          (req_arlen[chn_idx]),
-        .arburst        (req_arburst[chn_idx]),
-        .awid           (req_awid[chn_idx]),
-        .awaddr         (req_awaddr[chn_idx]),
-        .awlen          (req_awlen[chn_idx]),
-        .awburst        (req_awburst[chn_idx]),
+        .atx_id         (atx_id[(chn_idx+1)*MST_ID_W-1-:MST_ID_W]),
+        .atx_src_burst  (atx_src_burst[(chn_idx+1)*2-1-:2]),
+        .atx_dst_burst  (atx_dst_burst[(chn_idx+1)*2-1-:2]),
+        .atx_wd_per_burst(atx_wd_per_burst[(chn_idx+1)*DMA_LENGTH_W-1-:DMA_LENGTH_W]),
+        .arid           (req_arid[(chn_idx+1)*MST_ID_W-1-:MST_ID_W]),
+        .araddr         (req_araddr[(chn_idx+1)*SRC_ADDR_W-1-:SRC_ADDR_W]),
+        .arlen          (req_arlen[(chn_idx+1)*ATX_LEN_W-1-:ATX_LEN_W]),
+        .arburst        (req_arburst[(chn_idx+1)*2-1-:2]),
+        .awid           (req_awid[(chn_idx+1)*MST_ID_W-1-:MST_ID_W]),
+        .awaddr         (req_awaddr[(chn_idx+1)*DST_ADDR_W-1-:DST_ADDR_W]),
+        .awlen          (req_awlen[(chn_idx+1)*ATX_LEN_W-1-:ATX_LEN_W]),
+        .awburst        (req_awburst[(chn_idx+1)*2-1-:2]),
         .atx_vld        (req_atx_vld[chn_idx]),
         .atx_rdy        (req_atx_rdy[chn_idx]),
         .atx_done       (atx_done[chn_idx])
@@ -142,16 +142,16 @@ end
 else begin : SINGLE_CHANNEL_MODE
     // -- Bypass
     assign atx_chn_id   = 1'b0;
-    assign atx_arid     = req_arid[0]; 
-    assign atx_araddr   = req_araddr[0]; 
-    assign atx_arlen    = req_arlen[0]; 
-    assign atx_arburst  = req_arburst[0]; 
-    assign atx_awid     = req_awid[0]; 
-    assign atx_awaddr   = req_awaddr[0]; 
-    assign atx_awlen    = req_awlen[0]; 
-    assign atx_awburst  = req_awburst[0]; 
-    assign atx_vld      = req_atx_vld[0]; 
-    assign req_atx_rdy[0] = atx_rdy;
+    assign atx_arid     = req_arid; 
+    assign atx_araddr   = req_araddr; 
+    assign atx_arlen    = req_arlen; 
+    assign atx_arburst  = req_arburst; 
+    assign atx_awid     = req_awid; 
+    assign atx_awaddr   = req_awaddr; 
+    assign atx_awlen    = req_awlen; 
+    assign atx_awburst  = req_awburst; 
+    assign atx_vld      = req_atx_vld; 
+    assign req_atx_rdy  = atx_rdy;
 end
 endgenerate
 endmodule

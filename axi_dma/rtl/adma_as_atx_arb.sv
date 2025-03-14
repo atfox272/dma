@@ -15,18 +15,18 @@ module adma_as_atx_arb #(
     input                       clk,
     input                       rst_n,
     // AXI Transaction information from multiple channels
-    input   [MST_ID_W-1:0]      bwd_arid    [0:DMA_CHN_NUM-1],
-    input   [SRC_ADDR_W-1:0]    bwd_araddr  [0:DMA_CHN_NUM-1],
-    input   [ATX_LEN_W-1:0]     bwd_arlen   [0:DMA_CHN_NUM-1],
-    input   [1:0]               bwd_arburst [0:DMA_CHN_NUM-1],
-    input   [MST_ID_W-1:0]      bwd_awid    [0:DMA_CHN_NUM-1],
-    input   [DST_ADDR_W-1:0]    bwd_awaddr  [0:DMA_CHN_NUM-1],
-    input   [ATX_LEN_W-1:0]     bwd_awlen   [0:DMA_CHN_NUM-1],
-    input   [1:0]               bwd_awburst [0:DMA_CHN_NUM-1],
-    input                       bwd_atx_vld [0:DMA_CHN_NUM-1],
-    output                      bwd_atx_rdy [0:DMA_CHN_NUM-1],
+    input   [DMA_CHN_NUM*MST_ID_W-1:0]      bwd_arid,
+    input   [DMA_CHN_NUM*SRC_ADDR_W-1:0]    bwd_araddr,
+    input   [DMA_CHN_NUM*ATX_LEN_W-1:0]     bwd_arlen,
+    input   [DMA_CHN_NUM*2-1:0]             bwd_arburst,
+    input   [DMA_CHN_NUM*MST_ID_W-1:0]      bwd_awid,
+    input   [DMA_CHN_NUM*DST_ADDR_W-1:0]    bwd_awaddr,
+    input   [DMA_CHN_NUM*ATX_LEN_W-1:0]     bwd_awlen,
+    input   [DMA_CHN_NUM*2-1:0]             bwd_awburst,
+    input   [DMA_CHN_NUM-1:0]               bwd_atx_vld,
+    output  [DMA_CHN_NUM-1:0]               bwd_atx_rdy,
     // Channel arbitration CSR
-    input   [DMA_CHN_ARB_W-1:0] chn_arb_rate[0:DMA_CHN_NUM-1],
+    input   [DMA_CHN_NUM*DMA_CHN_ARB_W-1:0] chn_arb_rate,
     // Selected AXI Transaction information
     output  [DMA_CHN_NUM_W-1:0] fwd_atx_chn_id,
     output  [MST_ID_W-1:0]      fwd_arid,
@@ -48,6 +48,14 @@ module adma_as_atx_arb #(
     wire [DMA_CHN_NUM_W-1:0]    chn_grnt_id;
     wire                        fwd_hsk;
     wire [DMA_CHN_NUM*DMA_CHN_ARB_W-1:0] chn_req_weight;
+    wire [MST_ID_W-1:0]         req_arid        [0:DMA_CHN_NUM-1];
+    wire [SRC_ADDR_W-1:0]       req_araddr      [0:DMA_CHN_NUM-1];
+    wire [ATX_LEN_W-1:0]        req_arlen       [0:DMA_CHN_NUM-1];
+    wire [2-1:0]                req_arburst     [0:DMA_CHN_NUM-1];
+    wire [MST_ID_W-1:0]         req_awid        [0:DMA_CHN_NUM-1];
+    wire [DST_ADDR_W-1:0]       req_awaddr      [0:DMA_CHN_NUM-1];
+    wire [ATX_LEN_W-1:0]        req_awlen       [0:DMA_CHN_NUM-1];
+    wire [2-1:0]                req_awburst     [0:DMA_CHN_NUM-1];
     // Module instantiation
     // -- Arbiter
     arbiter_iwrr_1cycle #(
@@ -72,21 +80,29 @@ module adma_as_atx_arb #(
     );
     // Combinational logic
     assign fwd_atx_chn_id = chn_grnt_id;
-    assign fwd_arid       = bwd_arid[chn_grnt_id];
-    assign fwd_araddr     = bwd_araddr[chn_grnt_id];
-    assign fwd_arlen      = bwd_arlen[chn_grnt_id];
-    assign fwd_arburst    = bwd_arburst[chn_grnt_id];
-    assign fwd_awid       = bwd_awid[chn_grnt_id];
-    assign fwd_awaddr     = bwd_awaddr[chn_grnt_id];
-    assign fwd_awlen      = bwd_awlen[chn_grnt_id];
-    assign fwd_awburst    = bwd_awburst[chn_grnt_id];
+    assign fwd_arid       = req_arid[chn_grnt_id];
+    assign fwd_araddr     = req_araddr[chn_grnt_id];
+    assign fwd_arlen      = req_arlen[chn_grnt_id];
+    assign fwd_arburst    = req_arburst[chn_grnt_id];
+    assign fwd_awid       = req_awid[chn_grnt_id];
+    assign fwd_awaddr     = req_awaddr[chn_grnt_id];
+    assign fwd_awlen      = req_awlen[chn_grnt_id];
+    assign fwd_awburst    = req_awburst[chn_grnt_id];
     assign fwd_atx_vld    = bwd_atx_vld[chn_grnt_id];
     assign fwd_hsk        = fwd_atx_vld & fwd_atx_rdy;
+    assign chn_req_weight = chn_arb_rate;
 generate
 for(chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : CHN_MAP
     assign bwd_atx_rdy[chn_idx] = (chn_grnt_id == chn_idx) & fwd_atx_rdy;
-    assign chn_req[chn_idx] = bwd_atx_vld[chn_idx];
-    assign chn_req_weight[(chn_idx+1)*DMA_CHN_ARB_W-1-:DMA_CHN_ARB_W] = chn_arb_rate[chn_idx];
+    assign chn_req[chn_idx]     = bwd_atx_vld[chn_idx];
+    assign req_arid[chn_idx]    = bwd_arid[(chn_idx+1)*MST_ID_W-1-:MST_ID_W];
+    assign req_araddr[chn_idx]  = bwd_araddr[(chn_idx+1)*SRC_ADDR_W-1-:SRC_ADDR_W];
+    assign req_arlen[chn_idx]   = bwd_arlen[(chn_idx+1)*ATX_LEN_W-1-:ATX_LEN_W];
+    assign req_arburst[chn_idx] = bwd_arburst[(chn_idx+1)*2-1-:2];
+    assign req_awid[chn_idx]    = bwd_awid[(chn_idx+1)*MST_ID_W-1-:MST_ID_W];
+    assign req_awaddr[chn_idx]  = bwd_awaddr[(chn_idx+1)*DST_ADDR_W-1-:DST_ADDR_W];
+    assign req_awlen[chn_idx]   = bwd_awlen[(chn_idx+1)*ATX_LEN_W-1-:ATX_LEN_W];
+    assign req_awburst[chn_idx] = bwd_awburst[(chn_idx+1)*2-1-:2];
 end
 endgenerate
 endmodule

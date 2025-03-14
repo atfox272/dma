@@ -57,34 +57,33 @@ module adma_reg_map
     // DMA CSRs
     output                          dma_en,
     // Channel CSR
-    output                          chn_ctrl_en         [0:DMA_CHN_NUM-1],
-    output                          chn_xfer_2d         [0:DMA_CHN_NUM-1],
-    output                          chn_xfer_cyclic     [0:DMA_CHN_NUM-1],
-    output                          chn_irq_msk_irq_com [0:DMA_CHN_NUM-1],
-    output                          chn_irq_msk_irq_qed [0:DMA_CHN_NUM-1],
-    input                           chn_irq_src_irq_com [0:DMA_CHN_NUM-1],
-    input                           chn_irq_src_irq_qed [0:DMA_CHN_NUM-1],
-    output  [DMA_CHN_ARB_W-1:0]     chn_arb_rate        [0:DMA_CHN_NUM-1],
+    output  [DMA_CHN_NUM-1:0]       chn_ctrl_en,
+    output  [DMA_CHN_NUM-1:0]       chn_xfer_2d,
+    output  [DMA_CHN_NUM-1:0]       chn_xfer_cyclic,
+    output  [DMA_CHN_NUM-1:0]       chn_irq_msk_irq_com,
+    output  [DMA_CHN_NUM-1:0]       chn_irq_msk_irq_qed,
+    input   [DMA_CHN_NUM-1:0]       chn_irq_src_irq_com,
+    input   [DMA_CHN_NUM-1:0]       chn_irq_src_irq_qed,
+    output  [DMA_CHN_NUM*DMA_CHN_ARB_W-1:0]     chn_arb_rate,
     // AXI4 Transaction CSR
-    output  [MST_ID_W-1:0]          atx_id              [0:DMA_CHN_NUM-1],
-    output  [1:0]                   atx_src_burst       [0:DMA_CHN_NUM-1],
-    output  [1:0]                   atx_dst_burst       [0:DMA_CHN_NUM-1],
-    output  [DMA_LENGTH_W-1:0]      atx_wd_per_burst    [0:DMA_CHN_NUM-1],
+    output  [DMA_CHN_NUM*MST_ID_W-1:0]          atx_id,
+    output  [DMA_CHN_NUM*2-1:0]                 atx_src_burst,
+    output  [DMA_CHN_NUM*2-1:0]                 atx_dst_burst,
+    output  [DMA_CHN_NUM*DMA_LENGTH_W-1:0]      atx_wd_per_burst,
     // Descriptor Queue
-    output                          desc_wr_vld_o       [0:DMA_CHN_NUM-1],
-    input                           desc_wr_rdy_i       [0:DMA_CHN_NUM-1],
-    output  [SRC_ADDR_W-1:0]        desc_src_addr_o     [0:DMA_CHN_NUM-1],
-    output  [DST_ADDR_W-1:0]        desc_dst_addr_o     [0:DMA_CHN_NUM-1],
-    output  [DMA_LENGTH_W-1:0]      desc_xfer_xlen_o    [0:DMA_CHN_NUM-1],
-    output  [DMA_LENGTH_W-1:0]      desc_xfer_ylen_o    [0:DMA_CHN_NUM-1],
-    output  [DMA_LENGTH_W-1:0]      desc_src_strd_o     [0:DMA_CHN_NUM-1],
-    output  [DMA_LENGTH_W-1:0]      desc_dst_strd_o     [0:DMA_CHN_NUM-1],
+    output  [DMA_CHN_NUM-1:0]                   desc_wr_vld_o,
+    input   [DMA_CHN_NUM-1:0]                   desc_wr_rdy_i,
+    output  [DMA_CHN_NUM*SRC_ADDR_W-1:0]        desc_src_addr_o,
+    output  [DMA_CHN_NUM*DST_ADDR_W-1:0]        desc_dst_addr_o,
+    output  [DMA_CHN_NUM*DMA_LENGTH_W-1:0]      desc_xfer_xlen_o,
+    output  [DMA_CHN_NUM*DMA_LENGTH_W-1:0]      desc_xfer_ylen_o,
+    output  [DMA_CHN_NUM*DMA_LENGTH_W-1:0]      desc_src_strd_o,
+    output  [DMA_CHN_NUM*DMA_LENGTH_W-1:0]      desc_dst_strd_o,
     // DMA Transfer CSR
-    input   [DMA_XFER_ID_W-1:0]     xfer_id             [0:DMA_CHN_NUM-1],
-    input   [DMA_DESC_DEPTH-1:0]    xfer_done           [0:DMA_CHN_NUM-1],
-    input   [DMA_XFER_ID_W-1:0]     active_xfer_id      [0:DMA_CHN_NUM-1],
-    input   [DMA_LENGTH_W-1:0]      active_xfer_len     [0:DMA_CHN_NUM-1]
-
+    input   [DMA_CHN_NUM*DMA_XFER_ID_W-1:0]     xfer_id,
+    input   [DMA_CHN_NUM*DMA_DESC_DEPTH-1:0]    xfer_done,
+    input   [DMA_CHN_NUM*DMA_XFER_ID_W-1:0]     active_xfer_id,
+    input   [DMA_CHN_NUM*DMA_LENGTH_W-1:0]      active_xfer_len
 );
     // Local paramters
     localparam RW_REG_ADDR      = DMA_BASE_ADDR + 32'h0000_0000;    // Read-Write registers
@@ -183,33 +182,33 @@ generate
     // -- RW registers (Base 0x0000)
         assign dma_en                       = rw_reg[                            'h00  ][0];
     for (chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : RW_CON_GEN
-        assign chn_ctrl_en[chn_idx]         = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h01  ][0];
-        assign chn_xfer_2d[chn_idx]         = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h02  ][0];
-        assign chn_xfer_cyclic[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h02  ][1];
-        assign chn_irq_msk_irq_com[chn_idx] = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h03  ][0];
-        assign chn_irq_msk_irq_qed[chn_idx] = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h03  ][1];
-        assign chn_arb_rate[chn_idx]        = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h04  ][DMA_CHN_ARB_W-1:0];
+        assign chn_ctrl_en[chn_idx]                                         = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h01  ][0];
+        assign chn_xfer_2d[chn_idx]                                         = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h02  ][0];
+        assign chn_xfer_cyclic[chn_idx]                                     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h02  ][1];
+        assign chn_irq_msk_irq_com[chn_idx]                                 = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h03  ][0];
+        assign chn_irq_msk_irq_qed[chn_idx]                                 = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h03  ][1];
+        assign chn_arb_rate[(chn_idx+1)*DMA_CHN_ARB_W-1-:DMA_CHN_ARB_W]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h04  ][DMA_CHN_ARB_W-1:0];
 
-        assign atx_id[chn_idx]              = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h05  ][MST_ID_W-1:0];
-        assign atx_src_burst[chn_idx]       = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h06  ][1:0];
-        assign atx_dst_burst[chn_idx]       = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h07  ][1:0];
-        assign atx_wd_per_burst[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h08  ][DMA_LENGTH_W-1:0];
+        assign atx_id[(chn_idx+1)*MST_ID_W-1-:MST_ID_W]                     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h05  ][MST_ID_W-1:0];
+        assign atx_src_burst[(chn_idx+1)*2-1-:2]       = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h06  ][1:0];
+        assign atx_dst_burst[(chn_idx+1)*2-1-:2]       = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h07  ][1:0];
+        assign atx_wd_per_burst[(chn_idx+1)*DMA_LENGTH_W-1-:DMA_LENGTH_W]   = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h08  ][DMA_LENGTH_W-1:0];
         
-        assign desc_src_addr_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h09  ][SRC_ADDR_W-1:0];
-        assign desc_dst_addr_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0A  ][DST_ADDR_W-1:0];
-        assign desc_xfer_xlen_o[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0B  ][DMA_LENGTH_W-1:0];
-        assign desc_xfer_ylen_o[chn_idx]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0C  ][DMA_LENGTH_W-1:0];
-        assign desc_src_strd_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0D  ][DMA_LENGTH_W-1:0];
-        assign desc_dst_strd_o[chn_idx]     = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0E  ][DMA_LENGTH_W-1:0];
+        assign desc_src_addr_o[(chn_idx+1)*SRC_ADDR_W-1-:SRC_ADDR_W]        = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h09  ][SRC_ADDR_W-1:0];
+        assign desc_dst_addr_o[(chn_idx+1)*DST_ADDR_W-1-:DST_ADDR_W]        = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0A  ][DST_ADDR_W-1:0];
+        assign desc_xfer_xlen_o[(chn_idx+1)*DMA_LENGTH_W-1-:DMA_LENGTH_W]   = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0B  ][DMA_LENGTH_W-1:0];
+        assign desc_xfer_ylen_o[(chn_idx+1)*DMA_LENGTH_W-1-:DMA_LENGTH_W]   = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0C  ][DMA_LENGTH_W-1:0];
+        assign desc_src_strd_o[(chn_idx+1)*DMA_LENGTH_W-1-:DMA_LENGTH_W]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0D  ][DMA_LENGTH_W-1:0];
+        assign desc_dst_strd_o[(chn_idx+1)*DMA_LENGTH_W-1-:DMA_LENGTH_W]    = rw_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0E  ][DMA_LENGTH_W-1:0];
     end
 
     // -- RO registers  (Base 0x2000)
     for (chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : RO_CON_GEN
         assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h00 ] = {{(S_DATA_W-2){1'b0}},               chn_irq_src_irq_qed[chn_idx],   chn_irq_src_irq_com[chn_idx]};
-        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h01 ] = {{(S_DATA_W-DMA_XFER_ID_W){1'b0}},                                   xfer_id[chn_idx]            };
-        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h02 ] = {{(S_DATA_W-DMA_DESC_DEPTH){1'b0}},                                  xfer_done[chn_idx]          };
-        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h03 ] = {{(S_DATA_W-DMA_XFER_ID_W){1'b0}},                                   active_xfer_id[chn_idx]     };
-        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h04 ] = {{(S_DATA_W-DMA_LENGTH_W){1'b0}},                                    active_xfer_len[chn_idx]    };
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h01 ] = {{(S_DATA_W-DMA_XFER_ID_W){1'b0}},                                   xfer_id[(chn_idx+1)*DMA_XFER_ID_W-1-:DMA_XFER_ID_W]            };
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h02 ] = {{(S_DATA_W-DMA_DESC_DEPTH){1'b0}},                                  xfer_done[(chn_idx+1)*DMA_DESC_DEPTH-1-:DMA_DESC_DEPTH]          };
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h03 ] = {{(S_DATA_W-DMA_XFER_ID_W){1'b0}},                                   active_xfer_id[(chn_idx+1)*DMA_XFER_ID_W-1-:DMA_XFER_ID_W]     };
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h04 ] = {{(S_DATA_W-DMA_LENGTH_W){1'b0}},                                    active_xfer_len[(chn_idx+1)*DMA_LENGTH_W-1-:DMA_LENGTH_W]    };
     end
 
     // -- RW1S registers (Base 0x1000)
