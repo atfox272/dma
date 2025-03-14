@@ -28,7 +28,7 @@
 `define WREADY_STALL_MAX    0
 `define BREADY_STALL_MAX    0
 
-parameter SRC_IF_TYPE       = "AXIS"; // "AXI4" || "AXIS"
+parameter SRC_IF_TYPE       = "AXI4"; // "AXI4" || "AXIS"
 parameter DST_IF_TYPE       = "AXI4"; // "AXI4" || "AXIS"
 
 `define END_TIME            100000

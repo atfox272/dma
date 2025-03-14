@@ -51,6 +51,8 @@ module adma_dm_src_axis #(
     wire                            fwd_rob_vld;
     wire                            fwd_rob_rdy;
 
+    wire    [DMA_CHN_NUM*MST_ID_W-1:0]  atx_id_flat;
+
     // Module instantiation
     // -- Skid buffer
     skid_buffer #(
@@ -89,7 +91,7 @@ if((ROB_EN == 1) && (DMA_CHN_NUM > 1)) begin : ROB_GEN
         .ord_len        (atx_arlen),    // total length = atx_arlen - 1
         .ord_vld        (atx_vld),
         .ord_rdy        (atx_rdy),
-        .buf_id         (atx_id)
+        .buf_id         (atx_id_flat)
     );
 end
 else begin : ROB_BYPASS_GEN
@@ -103,8 +105,9 @@ endgenerate
     assign atx_rdata_vld= fwd_rob_vld;
     assign fwd_rob_rdy  = atx_rdata_rdy; 
 generate
-for (chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : ATX_SRC_ERR_GEN
+for (chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : CHN_MAP_GEN
     assign atx_src_err[chn_idx] = 1'b0;
+    assign atx_id_flat[(chn_idx+1)*MST_ID_W-1-:MST_ID_W] = atx_id[chn_idx];
 end
 endgenerate
 endmodule

@@ -56,6 +56,8 @@ module adma_dm_axi_b #(
     wire                            ab_fwd_rdy;
     wire                            ab_bwd_vld;
     wire                            ab_bwd_rdy;
+    
+    wire    [DMA_CHN_NUM*MST_ID_W-1:0]  atx_id_flat;
     // Module instantiation
     // -- Skid buffer
     skid_buffer #(
@@ -95,7 +97,7 @@ if((ROB_EN == 1) && (DMA_CHN_NUM > 1)) begin : ROB_GEN
         .ord_len        (1'b1),    // total length = atx_arlen - 1
         .ord_vld        (rob_ord_vld),
         .ord_rdy        (rob_ord_rdy),
-        .buf_id         (atx_id)
+        .buf_id         (atx_id_flat)
     );
 end
 else begin : ROB_BYPASS_GEN
@@ -134,9 +136,10 @@ endgenerate
     assign m_b_hsk          = m_bvalid & m_bready;
     assign ab_fwd_rdy       = m_b_hsk;  
     generate
-for (chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : ATX_DST_ERR_GEN
+for (chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : CHN_MAP_GEN
     assign atx_dst_err[chn_idx] = (ab_fwd_chn_id == chn_idx) & (~|(m_bresp^SLVERR_ENC) | ~|(m_bresp^DECERR_ENC))  & m_b_hsk; // The accepted data is a Error response -> return the flag
     assign atx_done[chn_idx]    = (ab_fwd_chn_id == chn_idx) & m_b_hsk; // ATX done -> return the flag
+    assign atx_id_flat[(chn_idx+1)*MST_ID_W-1-:MST_ID_W] = atx_id[chn_idx];
 end
 endgenerate
 endmodule
