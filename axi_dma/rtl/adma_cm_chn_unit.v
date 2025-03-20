@@ -99,7 +99,7 @@ module adma_cm_chn_unit
     );
     // Completion interrupt request generator
 generate
-for(xfer_idx = 0; xfer_idx < DMA_DESC_DEPTH; xfer_idx++) begin : COMP_IRQ_GEN
+for(xfer_idx = 0; xfer_idx < DMA_DESC_DEPTH; xfer_idx = xfer_idx + 1) begin : COMP_IRQ_GEN
     edgedet #(
         .RISING_EDGE            (1) // RISING edge
     ) cig (

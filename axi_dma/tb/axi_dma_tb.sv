@@ -5,8 +5,8 @@
 `define RST_DUR             9
 
 // Testbench mode
-// `define CUSTOM_MODE
-`define IMG_STREAM_MODE
+`define CUSTOM_MODE
+// `define IMG_STREAM_MODE
 
 // Monitor mode
 // `define MONITOR_DMA_SLV_AW
@@ -359,12 +359,12 @@ module axi_dma_tb;
         chn_config.chn_id           = 'd00;
         chn_config.chn_en           = 1'b1; // Enable channel 0
         chn_config.chn_2d_xfer      = 1'b1; // On
-        chn_config.chn_cyclic_xfer  = 1'b1; // Off
+        chn_config.chn_cyclic_xfer  = 1'b0; // Off
         chn_config.chn_irq_msk_com  = 1'b1; // Enable
         chn_config.chn_irq_msk_qed  = 1'b1; // Enable
-        chn_config.chn_arb_rate     = 'h03;
+        chn_config.chn_arb_rate     = 'h01;
         chn_config.atx_id           = 'h02;
-        chn_config.atx_src_burst    = 2'b01; // INCR burst 
+        chn_config.atx_src_burst    = 2'b00; // INCR burst 
         chn_config.atx_dst_burst    = 2'b00; // FIX burst
         chn_config.atx_wd_per_burst = 'd05;  // 6 AXI transfers per burst
         config_chn(chn_config);
@@ -376,8 +376,8 @@ module axi_dma_tb;
         chn_config.chn_cyclic_xfer  = 1'b0; // ON
         chn_config.chn_irq_msk_com  = 1'b1; // Enable
         chn_config.chn_irq_msk_qed  = 1'b1; // Enable
-        chn_config.chn_arb_rate     = 'h05;
-        chn_config.atx_id           = 'h07;
+        chn_config.chn_arb_rate     = 'h01;
+        chn_config.atx_id           = 'h03;
         chn_config.atx_src_burst    = 2'b01; // INCR burst 
         chn_config.atx_dst_burst    = 2'b01; // INCR burst
         chn_config.atx_wd_per_burst = 'd07;  // 8 AXI transfers per burst
@@ -385,33 +385,33 @@ module axi_dma_tb;
         
         // Push 1 Descriptor[0] to Channel[0]
         desc_config.chn_id          = 'd00;
-        desc_config.src_addr        = 32'h1000_0000;
-        desc_config.dst_addr        = 32'h2000_0000;
-        desc_config.xfer_xlen       = 'd08; // Col Length = 9
-        desc_config.xfer_ylen       = 'd03; // Row Length = 4
+        desc_config.src_addr        = 32'h0000_0000;
+        desc_config.dst_addr        = 32'h0000_0000;
+        desc_config.xfer_xlen       = 'd15; // Col Length = 9
+        desc_config.xfer_ylen       = 'd00; // Row Length = 4
         desc_config.src_stride      = 'h1000;
         desc_config.dst_stride      = 'h1000;
         config_desc(desc_config);
 
         // Push 1 Descriptor[0] to Channel[1]
-        desc_config.chn_id          = 'd01;
-        desc_config.src_addr        = 32'h5000_0000;
-        desc_config.dst_addr        = 32'h6000_0000;
-        desc_config.xfer_xlen       = 'd15; // Col Length = 16
-        desc_config.xfer_ylen       = 'd04; // Row Length = 5
-        desc_config.src_stride      = 'h1000;
-        desc_config.dst_stride      = 'h1000;
-        config_desc(desc_config);
+        // desc_config.chn_id          = 'd01;
+        // desc_config.src_addr        = 32'h5000_0000;
+        // desc_config.dst_addr        = 32'h6000_0000;
+        // desc_config.xfer_xlen       = 'd15; // Col Length = 16
+        // desc_config.xfer_ylen       = 'd04; // Row Length = 5
+        // desc_config.src_stride      = 'h1000;
+        // desc_config.dst_stride      = 'h1000;
+        // config_desc(desc_config);
 
-        // Push 1 Descriptor[1] to Channel[0]
-        desc_config.chn_id          = 'd00;
-        desc_config.src_addr        = 32'h3000_0000;
-        desc_config.dst_addr        = 32'h4000_0000;
-        desc_config.xfer_xlen       = 'd03; // Col Length = 4
-        desc_config.xfer_ylen       = 'd01; // Row Length = 2
-        desc_config.src_stride      = 'h1000;
-        desc_config.dst_stride      = 'h1000;
-        config_desc(desc_config);
+        // // Push 1 Descriptor[1] to Channel[0]
+        // desc_config.chn_id          = 'd00;
+        // desc_config.src_addr        = 32'h3000_0000;
+        // desc_config.dst_addr        = 32'h4000_0000;
+        // desc_config.xfer_xlen       = 'd03; // Col Length = 4
+        // desc_config.xfer_ylen       = 'd01; // Row Length = 2
+        // desc_config.src_stride      = 'h1000;
+        // desc_config.dst_stride      = 'h1000;
+        // config_desc(desc_config);
 `elsif IMG_STREAM_MODE
         // Configure DMA
         dma_config.dma_en = 1'b1;
@@ -998,9 +998,9 @@ module axi_dma_tb;
                     end
                 end
             end 
+`ifdef IMG_STREAM_MODE
             begin   : SRC_AXIS
             forever begin
-`ifdef IMG_STREAM_MODE
                 for(int i = 0; i < SRC_MEM_SIZE; i = i + 1) begin   // Scan all elements in Source Memory
                     m_axis_transfer (
                         .tid('h0),
@@ -1010,9 +1010,9 @@ module axi_dma_tb;
                         .tlast(i == (SRC_MEM_SIZE-1))
                     );
                 end
+            end
+            end
 `endif
-            end
-            end
             begin   : DST_AXIS
                 atx_axis axis_temp;
                 int tdata_cnt_0 = 0;
