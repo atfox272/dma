@@ -71,7 +71,7 @@ for(chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : DESC_QUEU
     ) qig (
         .clk            (clk),
         .rst_n          (rst_n),
-        .i              (xfer_qed[chn_idx]),
+        .i              (xfer_qed[chn_idx] & chn_irq_msk_irq_qed[chn_idx]),
         .en             (chn_irq_msk_irq_qed[chn_idx]),
         .o              (irq_qed[chn_idx])
     );

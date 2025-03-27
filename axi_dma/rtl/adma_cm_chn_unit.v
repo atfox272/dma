@@ -105,7 +105,7 @@ for(xfer_idx = 0; xfer_idx < DMA_DESC_DEPTH; xfer_idx = xfer_idx + 1) begin : CO
     ) cig (
         .clk                    (clk),
         .rst_n                  (rst_n),
-        .i                      (xfer_done[xfer_idx]),   // One of 4 transfers in the channel has been done
+        .i                      (xfer_done[xfer_idx] & chn_irq_msk_irq_com),   // One of 4 transfers in the channel has been done
         .en                     (chn_irq_msk_irq_com),
         .o                      (xfer_done_rise[xfer_idx])
     );
