@@ -82,6 +82,7 @@ for(chn_idx = 0; chn_idx < DMA_CHN_NUM; chn_idx = chn_idx + 1) begin : DESC_QUEU
     assign xfer_qed[chn_idx]        = desc_wr_hsk[chn_idx];
     assign nxt_xfer_id[(chn_idx+1)*DMA_XFER_ID_W-1-:DMA_XFER_ID_W]       = xfer_id_cnt[chn_idx]; 
     assign xfer_done_clear[(chn_idx+1)*DMA_DESC_DEPTH-1-:DMA_DESC_DEPTH] = desc_wr_hsk[chn_idx]; // Assert 1 cycle only
+    assign chn_irq_src_irq_qed[chn_idx] = 1'b0; // TODO: Update later
     always @(posedge clk or negedge rst_n) begin
         if(~rst_n) begin
             xfer_id_cnt[chn_idx] <= {DMA_XFER_ID_W{1'b0}};

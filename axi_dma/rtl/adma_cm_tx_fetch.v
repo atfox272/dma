@@ -114,4 +114,5 @@ module adma_cm_tx_fetch
     assign active_xfer_id   = xfer_id;  // Transfer is in processed transfer register
     assign active_xfer_len  = xfer_xlen;
     assign xfer_ylen_flt    = xfer_ylen & {DMA_LENGTH_W{chn_xfer_2d}}; // In 1D transfer mode (chn_xfer_2d = 1'b0) -> xfer_ylen_flt = 18'h00
+    assign chn_irq_src_irq_com = 1'b0; // TODO: Update later
 endmodule

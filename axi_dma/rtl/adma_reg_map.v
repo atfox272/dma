@@ -209,6 +209,18 @@ generate
         assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h02 ] = {{(S_DATA_W-DMA_DESC_DEPTH){1'b0}},                                  xfer_done[(chn_idx+1)*DMA_DESC_DEPTH-1-:DMA_DESC_DEPTH]          };
         assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h03 ] = {{(S_DATA_W-DMA_XFER_ID_W){1'b0}},                                   active_xfer_id[(chn_idx+1)*DMA_XFER_ID_W-1-:DMA_XFER_ID_W]     };
         assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h04 ] = {{(S_DATA_W-DMA_LENGTH_W){1'b0}},                                    active_xfer_len[(chn_idx+1)*DMA_LENGTH_W-1-:DMA_LENGTH_W]    };
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h05 ] = {{S_DATA_W{1'b0}}}; // Reserved
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h06 ] = {{S_DATA_W{1'b0}}}; // Reserved
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h07 ] = {{S_DATA_W{1'b0}}}; // Reserved
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h08 ] = {{S_DATA_W{1'b0}}}; // Reserved
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h09 ] = {{S_DATA_W{1'b0}}}; // Reserved
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0A ] = {{S_DATA_W{1'b0}}}; // Reserved
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0B ] = {{S_DATA_W{1'b0}}}; // Reserved
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0C ] = {{S_DATA_W{1'b0}}}; // Reserved
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0D ] = {{S_DATA_W{1'b0}}}; // Reserved
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0E ] = {{S_DATA_W{1'b0}}}; // Reserved
+        assign ro_reg[chn_idx * DMA_CSR_CHN_OFS + 'h0F ] = {{S_DATA_W{1'b0}}}; // Reserved
+
     end
 
     // -- RW1S registers (Base 0x1000)
