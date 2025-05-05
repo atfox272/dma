@@ -165,6 +165,7 @@ else if(SRC_IF_TYPE == "AXIS") begin : SRC_AXIS_GEN
     assign m_arlen_o    = {ATX_LEN_W{1'b0}};
     assign m_arburst_o  = 2'b00;
     assign m_arvalid_o  = 1'b0;
+    assign m_rready_o   = 1'b0;
 end
 endgenerate
 endmodule
