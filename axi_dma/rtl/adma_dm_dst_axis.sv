@@ -98,7 +98,7 @@ module adma_dm_dst_axis #(
     assign m_tlast       = ~|(tdata_cnt^cur_tlen);
     assign m_tkeep_o     = {ATX_DST_BYTE_AMT{1'b1}};
     assign m_tstrb_o     = {ATX_DST_BYTE_AMT{1'b1}};
-    assign m_tvalid      = atx_wdata_vld & atx_wdata_rdy;
+    assign m_tvalid      = atx_wdata_vld & cur_atx_vld;
     assign atx_wdata_rdy = m_tready & cur_atx_vld;
     assign m_axis_hsk    = m_tvalid & m_tready;
 generate
